@@ -1,16 +1,18 @@
-<script setup>
+<script setup lang="ts">
 import { createApp, ref, reactive, computed, watch } from 'vue';
 import Primegue from 'primevue/config';
 import { Scatter } from 'vue-chartjs'
-import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js'
-import { tubeDatabase } from "@/tubeDatabase.js";
-import {tubeFactory, loadLineFactory, intersectLoadLines, intersectCharacteristicWithLoadLineV} from "@/models.js";
-import { TriodeGrapher } from '@/grapher.js';
-import { clamp } from '@/utils.js';
+import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, Tick } from 'chart.js'
+import type { ChartConfiguration } from 'chart.js';
+import { tubeDatabase } from "@/tubeDatabase";
+import { tubeFactory } from "@/models";
+import { loadLineFactory, intersectLoadLines, intersectCharacteristicWithLoadLineV } from "@/loadLines"
+import { TriodeGrapher } from '@/grapher';
+import { clamp } from '@/utils';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
-import zoomPlugin from 'chartjs-plugin-zoom';
+//import zoomPlugin from 'chartjs-plugin-zoom';
 
 
 Chart.register(
@@ -27,8 +29,9 @@ Chart.register(
 const ampState = reactive({
   mode: null,
   topology: null,
-  Iq: null, // mA
   Vq: null,
+  Iq: null, // amps
+  Iq_ma: null, // mA
   Bplus: null,
   biasMethod: null,
   Vg: null,
@@ -109,7 +112,7 @@ const resetACLoadLine = () => {
 
 const resetCathodeLoadLine = () => {
   if (ampState.biasMethod === 'cathode') {
-    cathodeLoadLine.value = loadLineFactory.createCathodeLoadLine(ampState.Rk);
+    cathodeLoadLine.value = loadLineFactory.createCathodeLoadLine(ampState.Rk, tubeModel.value);
   } else {
     cathodeLoadLine.value = null;
   }
@@ -121,7 +124,7 @@ const clampAmpState = () => {
     ampState.Vg = clamp(ampState.Vg, tubeParams.value.minVg, tubeParams.value.maxVg);
     ampState.Iq = clamp(ampState.Iq, 0.00001, tubeParams.value.maxIp);
     
-    if (ampState.biasMode === 'cathode') {
+    if (ampState.biasMethod === 'cathode') {
       ampState.Rk = clamp(ampState.Rk, 0, 1000000000);
     }
 
@@ -293,10 +296,10 @@ watch(
   () => {
     clampAmpState();
     if (tubeModel.value !== null) {
-      tubeModel.value.setVg2(ampState.Vg2);
-      tubeModel.value.setMode(ampState.mode);
-      tubeModel.value.setUltralinearTap(ampState.ultralinearTap);
-      tubeModel.value.setBplus(ampState.Bplus);
+      // TODO: must be a better way to handle this
+      if (tubeParams.value.type === 'pentode') {
+        tubeModel.value.ampState = ampState;
+      }
       
       if (ampState.loadType === 'resistive') {
         ampState.Vq = intersectCharacteristicWithLoadLineV(tubeModel.value, ampState.Vg, dcLoadLine.value);
@@ -494,7 +497,7 @@ const chartData = computed(() => {
   return { 'type': 'scatter', datasets: datasets };
 });
 
-const chartOptions = computed(() => {
+const chartOptions = computed((): any => {
   tubeParams.value;
   
   if (selectedTube.value !== null) {
@@ -502,7 +505,6 @@ const chartOptions = computed(() => {
         animation: false,
         responsive: true,
         hover: {mode: 'index'},
-        stacked: false,
         plugins: {
           title: {
             display: true,
@@ -534,7 +536,7 @@ const chartOptions = computed(() => {
           },
           y: {
             ticks: {
-              callback: (value, index, ticks) => {
+              callback: (value: number, index: number, ticks: Tick[]) => {
                 // convert from A to mA
                 return (value*1000).toFixed();
               },
@@ -586,7 +588,7 @@ const chartOptions = computed(() => {
       </div>
       <div class="col-3 py-2">
         <div v-for="topology in topologies" :key="topology.id" class="flex align-items-center">
-          <RadioButton v-model="ampState.topology" :name="topology.id" name="dynamic" :value="topology.id" :disabled="tubeParams === null || ampState.loadType !== 'reactive'" />
+          <RadioButton v-model="ampState.topology" :name="topology.id" :value="topology.id" :disabled="tubeParams === null || ampState.loadType !== 'reactive'" />
           <label :for="topology.id" class="ml-2">{{ topology.name }}</label>
         </div>
       </div>
@@ -595,7 +597,7 @@ const chartOptions = computed(() => {
       </div>
       <div v-if="tubeParams?.type === 'pentode' || tubeParams?.type === 'tetrode'"  class="col-3 py-2">
         <div v-for="mode in modes" :key="mode.id" class="flex align-items-center">
-          <RadioButton v-model="ampState.mode" :name="mode.id" name="dynamic" :value="mode.id" :disabled="tubeParams === null || tubeParams?.type === 'triode'" />
+          <RadioButton v-model="ampState.mode" :name="mode.id" :value="mode.id" :disabled="tubeParams === null || tubeParams?.type === 'triode'" />
           <label :for="mode.id" class="ml-2">{{ mode.name }}</label>
         </div>
       </div>

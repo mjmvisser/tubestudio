@@ -1,25 +1,18 @@
 import { range } from './utils.js';
 import simplify from 'simplify-js';
-import { intersectCharacteristicWithLoadLineV } from "@/models.js";
+import { intersectCharacteristicWithLoadLineV } from "@/loadLines";
+import type { LoadLine } from "@/loadLines";
+import { TubeModel } from "@/models";
+import type { Point } from 'chart.js';
 
 class TriodeGrapher {
-  constructor(model, dcLoadLine, acLoadLine, cathodeLoadLine, minVg, maxVg, gridStep, maxVp, maxPp) {
+  constructor(private model: TubeModel, private dcLoadLine: LoadLine, private acLoadLine: LoadLine, private cathodeLoadLine: LoadLine, private minVg: number, private maxVg: number, private gridStep: number, private maxVp: number, private maxPp: number) {
     console.assert(gridStep > 0);
     console.assert(minVg < maxVg);
     console.assert(maxVp > 0);
-
-    this.model = model;
-    this.dcLoadLine = dcLoadLine;
-    this.acLoadLine = acLoadLine;
-    this.cathodeLoadLine = cathodeLoadLine;
-    this.minVg = minVg;
-    this.maxVg = maxVg;
-    this.gridStep = gridStep;
-    this.maxVp = maxVp;
-    this.maxPp = maxPp;
   }
 
-  graphVpIp(Vg) {
+  graphVpIp(Vg: number): Point[]  {
     if (this.model !== null) {
       return simplify(range(0, this.maxVp, 1).map(Vp => ({x: Vp, y: this.model.Ip(Vg, Vp)})), 0.00001, true);
     } else {
@@ -27,19 +20,19 @@ class TriodeGrapher {
     }
   }
 
-  graphVgbVpIp() {
+  graphVgbVpIp(): {Vg: number, VpIp: Point[]}[] {
     return range(this.minVg, this.maxVg, this.gridStep).map(Vg => ({
       'Vg': Vg,
       'VpIp': this.graphVpIp(Vg)
     }));
   }
 
-  graphPp() {
+  graphPp(): Point[] {
     return simplify(range(0, this.maxVp, 1).map(Vp => ({x: Vp, y: this.maxPp / Vp})), 0.00001, true);
   }
  
-  graphCathodeLoadLine(cathodeLoadLine, Rk) {
-    if (cathodeLoadLine !== null && this.cathodeLoadLine !== null && this.model !== null) {
+  graphCathodeLoadLine(Rk: number): Point[] {
+    if (this.cathodeLoadLine !== null && this.model !== null) {
       return simplify(range(this.minVg, this.maxVg, this.gridStep/10).map(Vg => {
         const I = this.cathodeLoadLine.I(Vg);
         const V = this.model.Vp(Vg, I);
@@ -50,7 +43,7 @@ class TriodeGrapher {
     }
   }
   
-  graphOperatingPoint(Vq) {
+  graphOperatingPoint(Vq: number): Point[] {
     if (this.dcLoadLine !== null) {
       return [{x: Vq, y: this.dcLoadLine.I(Vq)}];
     } else {
@@ -58,7 +51,7 @@ class TriodeGrapher {
     }
   }
 
-  graphHeadroom(Vg, inputHeadroom) {
+  graphHeadroom(Vg: number, inputHeadroom: number): Point[] {
     if (this.dcLoadLine !== null && this.model !== null) {
       const minVg = Vg - inputHeadroom;
       const maxVg = Vg + inputHeadroom;
