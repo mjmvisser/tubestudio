@@ -104,7 +104,29 @@ watch(() => amp?.Iq.toFixed(5), () => {
         Iq_ma.value = amp.Iq * 1000;
     }
 });
-    
+
+function proportionalStep(value: number) {
+    const absValue = Math.abs(value);
+    if (absValue < 1) {
+        return 0.01;
+    } else if (absValue < 10) {
+        return 0.1;
+    } else if (absValue < 100) {
+        return 1;
+    } else if (absValue < 1000) {
+        return 10;
+    } else if (absValue < 10000) {
+        return 100;
+    } else if (absValue < 100000) {
+        return 1000;
+    } else if (absValue < 1000000) {
+        return 10000;
+    } else if (absValue < 10000000) {
+        return 100000;
+    } else {
+        return 1000000;
+    }
+}
 
 //watch(
 //  () => amp.inputHeadroom,
@@ -390,7 +412,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
                 <div class="col-3 py-2">
                     <InputNumber v-model="amp.Bplus" :min=0 :max=tubeParams?.limits.maxVp :maxFractionDigits=2 showButtons
-                        :disabled="tubeParams === null" />
+                        :step="proportionalStep(amp.Bplus)" :disabled="tubeParams === null" />
                 </div>
                 <div class="col-3 py-2">
                     <label>Output Power (W):</label>
@@ -412,13 +434,13 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     <div class="grid">
                         <div class="col-12 py-0">Vq (V):</div>
                         <div class="col-12 py-0">
-                            <InputNumber v-model="amp.Vq" :min=0 :max=tubeParams?.limits.maxVp :maxFractionDigits=1 :step=1
-                                showButtons :disabled="tubeParams === null || amp.loadType === 'reactive'" />
+                            <InputNumber v-model="amp.Vq" :min=0 :max=tubeParams?.limits.maxVp :maxFractionDigits=1 
+                                :step="proportionalStep(amp.Vq)" showButtons :disabled="tubeParams === null || amp.loadType === 'reactive'" />
                         </div>
                         <div class="col-12 py-0">Iq (ma):</div>
                         <div class="col-12 py-0">
                             <InputNumber v-model="Iq_ma" :min=0.001 :max="tubeParams.limits.maxIp * 1000" :maxFractionDigits=2
-                                :step=0.01 showButtons :disabled="tubeParams === null" />
+                                :step="proportionalStep(Iq_ma)" showButtons :disabled="tubeParams === null" />
                         </div>
                     </div>
                 </div>
@@ -439,8 +461,8 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                         </div>
                     </div>
                     <div class="col-3 py-2">
-                        <InputNumber v-model="amp.Vg" :min=tubeParams?.limits.minVg :max=tubeParams?.limits.maxVg :step=0.01
-                            :maxFractionDigits=2 showButtons :disabled="tubeParams === null || amp.model === null" />
+                        <InputNumber v-model="amp.Vg" :min=tubeParams?.limits.minVg :max=tubeParams?.limits.maxVg 
+                            :step="proportionalStep(amp.Vg)" :maxFractionDigits=2 showButtons :disabled="tubeParams === null || amp.model === null" />
                     </div>
                 </template>                    
             </div>
@@ -462,14 +484,14 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     </div>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Rp" :min=0 :step=1000 showButtons :disabled="tubeParams === null" />
+                    <InputNumber v-model="amp.Rp" :min=0 :step="proportionalStep(amp.Rp)" showButtons :disabled="tubeParams === null" />
                 </div>
                 <template v-if="amp.model">
                     <div class="col-3 py-2">
                         <label>Cathode Load (Ω):</label>
                     </div>
                     <div class="col-3 py-2">
-                        <InputNumber v-model="amp.Rk" :min=0 :step=25 :maxFractionDigits=0 showButtons
+                        <InputNumber v-model="amp.Rk" :min=0 :step="proportionalStep(amp.Rk)" :maxFractionDigits=0 showButtons
                             :disabled="tubeParams === null || amp.model === null || amp.biasMethod !== 'cathode'" />
                     </div>
                 </template>
