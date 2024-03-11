@@ -1,9 +1,11 @@
-import { findRootWithBisection } from "./utils";
+import { findRootWithBisection } from './utils';
+import type { AmpState } from './amp';
 
-interface TubeParams {};
-
-abstract class TubeModel {
+export abstract class TubeModel {
+    type?: 'triode' | 'pentode';
     abstract Ip(Vg: number, Vp: number): number;
+
+    constructor(public ampState: AmpState) {};
 
     Vg(Vp: number, Ip: number): number {
         return findRootWithBisection((Vg) => {
@@ -18,7 +20,12 @@ abstract class TubeModel {
     }
 }
 
-interface KorenParams extends TubeParams {
+abstract class Triode extends TubeModel {
+    type: 'triode' = 'triode'; 
+}
+
+interface KorenParams {
+    type: 'koren',
     mu: number;
     ex: number;
     Kg1: number;
@@ -28,11 +35,9 @@ interface KorenParams extends TubeParams {
     Vct: number;
 }
 
-class KorenTriode extends TubeModel {
-    private params: KorenParams;
-    constructor(params: KorenParams) {
-        super();
-        this.params = params;
+class KorenTriode extends Triode {
+    constructor(ampState: AmpState, private params: KorenParams) {
+        super(ampState);
     }
 
     Ip(Vg: number, Vp: number): number {
@@ -52,17 +57,21 @@ class KorenTriode extends TubeModel {
 }
 
 interface AyumiParams {
+    type: 'ayumi',
     G: number;
     muc: number;
     alpha: number;
     Vgo: number;    
+    Glim?: number;
+    Xg?: number;
+}
+
+interface AyumiParamsFullySpecified extends AyumiParams {
     Glim: number;
     Xg: number;
 }
 
-class AyumiTriode extends TubeModel {
-    private params: AyumiParams;
-
+class AyumiTriode extends Triode {
     private a: number;
     private b: number;
     private c: number;
@@ -70,8 +79,11 @@ class AyumiTriode extends TubeModel {
     private Gp: number;
     private mum: number;
 
-    constructor(params: AyumiParams) {
-        super();
+    private params: AyumiParamsFullySpecified;
+
+    constructor(ampState: AmpState, params: AyumiParams) {
+        super(ampState);
+        this.params = params as AyumiParamsFullySpecified;
 
         this.a = (params.alpha === 1) ? Infinity : 1/(1 - params.alpha); // B.24
         this.b = 1.5 - this.a;                                           // B.25
@@ -82,12 +94,13 @@ class AyumiTriode extends TubeModel {
         this.mum = this.a / 1.5 * params.muc  // B.6
 
         this.params = {
+            type: 'ayumi',
             G: params.G,
             muc: params.muc,
             alpha: params.alpha,
             Vgo: params.Vgo,
-            Glim: (params.Glim === null) ? this.Gp * Math.pow(1 + 1/this.mum, 1.5) : params.Glim, // B.21
-            Xg: (params.Xg === null) ? 0.5 / Math.pow(1 + 1/this.mum, 1.5) : params.Xg,           // B.20
+            Glim: (params.Glim === undefined) ? this.Gp * Math.pow(1 + 1/this.mum, 1.5) : params.Glim, // B.21
+            Xg: (params.Xg === undefined) ? 0.5 / Math.pow(1 + 1/this.mum, 1.5) : params.Xg,           // B.20
         };
     }
     
@@ -122,21 +135,13 @@ class AyumiTriode extends TubeModel {
     }
 }
 
-interface AmpState {
-    Vg2: number;
-    mode: 'triode' | 'pentode' | 'ultralinear';
-    ultralinearTap: number;
-    Bplus: number;
+abstract class Pentode extends TubeModel {
+    type : 'pentode' = 'pentode';
 }
 
-class KorenPentode extends TubeModel {
-    private params: KorenParams;
-    private ampState: AmpState;
-
-    constructor(params: KorenParams, ampState: AmpState) {
-        super();
-        this.params = params;
-        this.ampState = ampState;
+class KorenPentode extends Pentode {
+    constructor(ampState: AmpState, private params: KorenParams) {
+        super(ampState);
     }
     
     Ip(Vg: number, Vp: number) {
@@ -145,8 +150,9 @@ class KorenPentode extends TubeModel {
             const V1 = Vp * Math.log(1 + Math.exp(this.params.Kp * ((1 / this.params.mu) + (Vg + this.params.Vct) / Math.sqrt(this.params.Kvb + Vp * Vp)))) / this.params.Kp;
             return Math.pow(V1, this.params.ex) * (1 + Math.sign(V1)) / this.params.Kg1;
         } else {
+            console.assert(this.ampState.Vg2 !== undefined);
             const t = this.ampState.mode === 'ultralinear' ? this.ampState.ultralinearTap/100 : this.ampState.mode === 'pentode' ? 0 : 1; 
-            const Vg2 = this.ampState.Vg2 * (1 - t) + Vp * t;
+            const Vg2 = this.ampState.Vg2! * (1 - t) + Vp * t;
             const V1 = Vg2 * Math.log(1 + Math.exp((1/this.params.mu + Vg/Vg2)*this.params.Kp)) / this.params.Kp;
             return (Math.pow(V1, this.params.ex) + Math.sign(V1) * Math.pow(V1, this.params.ex)) * Math.atan(Vp / this.params.Kvb) / this.params.Kg1;
         }
@@ -154,36 +160,33 @@ class KorenPentode extends TubeModel {
 }
 
 class AyumiPentode extends TubeModel {
-    private params: AyumiParams;
-    private ampState: AmpState;
-    constructor(params: AyumiParams, ampState: AmpState) {
-        super();
-        this.params = params;
-        this.ampState = ampState;   
+    constructor(public ampState: AmpState, private params: AyumiParams) {
+        super(ampState);
     }
 
     Ip(Vg: number, Vp: number) {
+        console.assert(false);
         return 0;
     }
 }
 
-const tubeFactory = {
-    createTube: (type: 'triode' | 'pentode', params: any, ampState: AmpState) => {
+export const tubeFactory = {
+    createTube: (type: 'triode' | 'tetrode' | 'pentode', ampState: AmpState, params: KorenParams | AyumiParams) => {
         switch (type) {
             case 'triode':
                 switch (params.type) {
                     case 'koren':
-                        return new KorenTriode(params);
+                        return new KorenTriode(ampState, params);
                     case 'ayumi':
-                        return new AyumiTriode(params);
+                        return new AyumiTriode(ampState, params);
                 }
                 break;
             case 'pentode':
                 switch (params.type) {
                     case 'koren':
-                        return new KorenPentode(params, ampState);
+                        return new KorenPentode(ampState, params);
                     case 'ayumi':
-                        return new AyumiPentode(params, ampState);
+                        return new AyumiPentode(ampState, params);
                 }
         }
         
@@ -191,4 +194,5 @@ const tubeFactory = {
     }
 }
 
-export { TubeModel, tubeFactory }
+
+export type TubeModelParams = (AyumiParams | KorenParams) & {type: string; attribution: string; source: string};

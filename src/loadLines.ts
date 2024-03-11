@@ -1,57 +1,64 @@
 import type { Point } from "chart.js";
 import { range, findRootWithBisection } from './utils.js';
-import { TubeModel } from "./models"
+import { TubeModel } from './tubeModels';
+import type { AmpState } from './amp';
 
 import simplify from 'simplify-js';
 
-export interface LoadLine {
-    I(V: number): number;
-    V(I: number): number;
-    getLine(): Point[];
+export abstract class DCLoadLine {
+    constructor(protected ampState: Readonly<AmpState>) {};
+
+    abstract I(V: number): number;
+    abstract V(I: number): number;
+    abstract Vq(): number;
+    abstract Iq(): number;
+    abstract getLine(): Point[];
 }
 
-class DCResistiveLoadLine implements LoadLine {
-    private Bplus: number;
-    private R: number;
-
-    constructor(Bplus: number, Rp: number, Rk: number) {
-        this.Bplus = Bplus;
-        this.R = Rp + Rk;
-    }
-    
-    I(V: number): number {
-        return (this.Bplus - V) / this.R;
+class DCResistiveLoadLine extends DCLoadLine {
+    I(V: number) {
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return (this.ampState.Bplus - V) / R;
     }
 
-    V(I: number): number {
-        return this.Bplus - I * this.R;
+    V(I: number) {
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return this.ampState.Bplus - I * R;
+    }
+
+    Iq() {
+        return this.I(this.ampState.Vq);
     }
     
+    Vq() {
+        return this.V(this.ampState.Iq);
+    }
+
     getLine(): Point[] {
         const p1 = {x: 0, y: this.I(0)};
-        const p2 = {x: this.Bplus, y: this.I(this.Bplus)};
+        const p2 = {x: this.ampState.Bplus, y: this.I(this.ampState.Bplus)};
         return [p1, p2];
     }
 }
 
-class DCSingleEndedReactiveLoadLine implements LoadLine {
-    private Bplus: number;
-    private Zp: number;
-    private Iq: number;
-    constructor(Bplus: number, Z: number, Iq: number) {
-        this.Bplus = Bplus;
-        this.Zp = Z;
-        this.Iq = Iq;
+class DCSingleEndedReactiveLoadLine extends DCLoadLine {
+    I(V: number) {
+        return (this.ampState.Bplus - V) / this.ampState.Rp + this.ampState.Iq;
     }
     
-    I(V: number): number {
-        return (this.Bplus - V) / this.Zp + this.Iq;
+    V(I: number) {
+        return this.ampState.Bplus + this.ampState.Rp * (this.ampState.Iq - I);
     }
     
-    V(I: number): number {
-        return this.Bplus + this.Zp * (this.Iq - I);
+    Iq() {
+        return this.ampState.Iq;
     }
-    
+
+    Vq() {
+        // a reactive load always has Bplus as Vq
+        return this.ampState.Bplus;
+    }
+
     getLine() : Point[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.V(0), y: 0}
@@ -59,44 +66,52 @@ class DCSingleEndedReactiveLoadLine implements LoadLine {
     }
 }
 
-class DCPushPullReactiveLoadLine implements LoadLine {
-    private Bplus: number;
-    private Zpa: number;
-    private Zpb: number;
-    private Iq: number;
-    private Vlim: number;
-    private Ilim: number;
-
-    constructor(Bplus: number, Z: number, Iq: number) {
-        this.Bplus = Bplus;
-        this.Zpa = Z/2;
-        this.Zpb = Z/4;
-        this.Iq = Iq;
-
-        this.Vlim = this.Bplus - this.Iq * this.Zpa;
-        this.Ilim = 2 * this.Iq;
+class DCPushPullReactiveLoadLine extends DCLoadLine {
+    private get Rpa() {
+        return this.ampState.Rp/2;
     }
-    
+
+    private get Rpb() {
+        return this.ampState.Rp/4;
+    }
+
+    private get Vlim() {
+        return this.ampState.Bplus - this.ampState.Iq * this.Rpa;
+    }
+
+    private get Ilim() {
+        return 2 * this.ampState.Iq;
+    }
+
     I(V: number): number {
         if (V <= this.Vlim) {
             // class B operation
-            return (this.Bplus - V) / this.Zpb;
+            return (this.ampState.Bplus - V) / this.Rpb;
         } else {
             // class A operation
-            return (this.Bplus - V) / this.Zpa + this.Iq;
+            return (this.ampState.Bplus - V) / this.Rpa + this.ampState.Iq;
         }
     }
     
     V(I: number): number {
         if (I >= this.Ilim) {
             // class B operation
-            return this.Bplus - this.Zpb * I;
+            return this.ampState.Bplus - this.Rpb * I;
         } else {
             // class A operation
-            return this.Bplus - this.Zpa * (I - this.Iq);
+            return this.ampState.Bplus - this.Rpa * (I - this.ampState.Iq);
         }
     }
     
+    Iq() {
+        return this.ampState.Iq;
+    }
+
+    Vq() {
+        // a reactive load always has Bplus as Vq
+        return this.ampState.Bplus;
+    }
+
     getLine(): Point[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.Vlim, y: this.Ilim};
@@ -105,28 +120,39 @@ class DCPushPullReactiveLoadLine implements LoadLine {
     }
 }
 
-class CathodeLoadLine implements LoadLine {
-    private Rk: number;
-    private model: TubeModel;
-    constructor(Rk: number, model: TubeModel) {
-        this.Rk = Rk;
-        this.model = model;
-    }
+class CathodeLoadLine {
+    constructor(private ampState: Readonly<AmpState>) {}
     
     I(Vg: number): number {
-        return -Vg / this.Rk;
+        if (this.ampState.biasMethod === 'cathode') {
+            return -Vg / this.ampState.Rk;
+        } else {
+            return this.ampState.Iq;
+        }
     }
     
     Vg(I: number): number {
-        return -I * this.Rk;
+        if (this.ampState.biasMethod === 'cathode') {
+            return -I * this.ampState.Rk;
+        } else {
+            return this.ampState.Vq;
+        }
     }
 
     V(I: number): number {
-        return this.model.Vp(this.Vg(I), I);
+        if (this.ampState.model) {
+            return this.ampState.model.Vp(this.Vg(I), I);
+        } else {
+            return this.ampState.Vq;
+        }
     }
     
-    static Rk(Vg: number, I: number) {
-        return Math.max(0, -Vg / I);
+    Rk() {
+        if (this.ampState.model) {
+            return Math.max(0, -this.ampState.Vg! / this.ampState.Iq);
+        } else {
+            return 0;
+        }
     }
 
     getLine(): Point[] {
@@ -138,28 +164,21 @@ class CathodeLoadLine implements LoadLine {
     }
 }
 
-class ACLoadLine implements LoadLine {
-    private R: number;
-    private Znext: number;
-    private Vq: number;
-    private Iq: number;
-    private Z: number;
+class ACLoadLine {
+    constructor(private ampState: Readonly<AmpState>) {
+    }
 
-    constructor(Rp: number, Rk: number, Znext: number, Vq: number, Iq: number) {
-        this.R = Rp + Rk;
-        this.Znext = Znext;
-        this.Vq = Vq;
-        this.Iq = Iq;
-        
-        this.Z = (this.R * this.Znext) / (this.R + this.Znext);
+    get Z() {
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return (R * this.ampState.Znext!) / (R + this.ampState.Znext!);
     }
 
     I(V: number): number {
-        return (this.Vq - V) / this.Z + this.Iq;
+        return (this.ampState.Vq - V) / this.Z + this.ampState.Iq;
     }
     
     V(I: number): number {
-        return this.Z * (this.Iq - I) + this.Vq;
+        return this.Z * (this.ampState.Iq - I) + this.ampState.Vq;
     }
     
     getLine(): Point[] {
@@ -170,49 +189,31 @@ class ACLoadLine implements LoadLine {
 }
 
 const loadLineFactory = {
-    createDCLoadLine: (topology: 'pp' | 'se', Bplus: number, loadType: 'resistive' | 'reactive', Rp: number, Rk: number, Iq: number) => {
-        if (loadType === "resistive" && Bplus >= 0 && Rp >= 0) {
-            return new DCResistiveLoadLine(Bplus, Rp, Rk || 0);
-        } else if (loadType === "reactive" && Bplus >= 0 && Rp >= 0 && Iq !== null) {
+    createDCLoadLine: (topology: 'pp' | 'se', loadType: 'resistive' | 'reactive', ampState : Readonly<AmpState>) => {
+        if (loadType === "reactive") {
             if (topology === 'pp') {
-                return new DCPushPullReactiveLoadLine(Bplus, Rp, Iq);
-            } else if (topology === 'se') {
-                return new DCSingleEndedReactiveLoadLine(Bplus, Rp, Iq);
+                return new DCPushPullReactiveLoadLine(ampState);
+            } else { // if (topology === 'se')
+                return new DCSingleEndedReactiveLoadLine(ampState);
             }
-        }
-
-        return null;
-    },
-    
-    createACLoadLine: (Rp: number, Rk: number, Znext: number, Vq: number, Iq: number) => {
-        if (Rp >= 0 && Znext !== null && Znext >= 0 && Vq !== null && Iq !== null) {
-            return new ACLoadLine(Rp, Rk || 0, Znext, Vq, Iq);
-        } else {
-            return null;
+        } else { // if (loadType === "resistive")
+            return new DCResistiveLoadLine(ampState);
         }
     },
-    
-    createCathodeLoadLine: (Rk: number, model: TubeModel) => {
-        if (Rk !== null) {
-            return new CathodeLoadLine(Rk, model);
-        } else {
-            return null;
-        }
-    }
 }
 
-const intersectCharacteristicWithLoadLineV = (model: TubeModel, Vg: number, loadLine: LoadLine): number => {
+const intersectCharacteristicWithLoadLineV = (model: TubeModel, Vg: number, loadLine: DCLoadLine): number => {
     // find intersection of loadline with characteristic curve at Vg and return Vq
     return findRootWithBisection((Vq) => {
         return model.Ip(Vg, Vq) - loadLine.I(Vq);
     }, 0, 5000, 1000, 0.0000001, 0.0000001);        
 }
 
-const intersectLoadLines = (loadLine: LoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number => {
+const intersectLoadLines = (loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number => {
     return findRootWithBisection((Vg) => {
         const Ip = cathodeLoadLine.I(Vg);
         return loadLine.V(Ip) - tubeModel.Vp(Vg, Ip);
     }, -200, 0, 1000, 0.0000001, 0.0000001)
 }
 
-export { loadLineFactory, intersectLoadLines, intersectCharacteristicWithLoadLineV }
+export { loadLineFactory, intersectLoadLines, intersectCharacteristicWithLoadLineV, ACLoadLine, CathodeLoadLine }
