@@ -53,7 +53,7 @@ export class Amp implements AmpState {
     private _acLoadLine: ACLoadLine;
     private _cathodeLoadLine: CathodeLoadLine;
 
-    constructor(public type: 'triode' | 'tetrode' | 'pentode', private defaults: TubeDefaults, private limits: TubeLimits) {
+    constructor(public name: string, public type: 'triode' | 'tetrode' | 'pentode', private defaults: TubeDefaults, private limits: TubeLimits) {
         this._Vq = 0;
         this._topology = type === 'triode' ? 'se' : 'pp';
         if (type !== 'triode') {
@@ -82,27 +82,32 @@ export class Amp implements AmpState {
 
     private setVq(Vq: number) {
         this._Vq = clamp(Vq, 0, this.limits.maxVp);
+        console.log(`Vq=${Vq}`);
     }
 
     private setIq(Iq: number) {
         this._Iq = clamp(Iq, 0, this.limits.maxIp);
-
+        console.log(`Iq=${this._Iq}`);
     }
 
     private setVg(Vg: number) {
         this._Vg = clamp(Vg!, this.limits.minVg, this.limits.maxVg);        
+        console.log(`Vg=${Vg}`);
     }
 
     private setVg2(Vg2: number) {
         this._Vg2 = clamp(Vg2!, 0, this.limits.maxVg2);
+        console.log(`Vg2=${Vg2}`);
     }
 
     private setRp(Rp: number) {
         this._Rp = Math.max(0, Rp);
+        console.log(`Rp=${Rp}`);
     }
 
     private setRk(Rk: number) {
         this._Rk = Math.max(0, Rk);
+        console.log(`Rk=${Rk}`);
     }
 
     get topology() { return this._topology; }
@@ -248,8 +253,10 @@ export class Amp implements AmpState {
             this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this._model));
             if (this._loadType === 'resistive') {
                 this.setIq(this._cathodeLoadLine.I(this._Vg));
+                this.setVq(this._cathodeLoadLine.V(this._Iq));
+            } else {
+                this.setIq(this._model.Ip(this._Vg, this._Vq));
             }
-            this.setVq(this._dcLoadLine.Vq());
         }
     }
 
