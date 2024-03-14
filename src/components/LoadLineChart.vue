@@ -483,7 +483,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                         </div>
                         <div>
                             <RadioButton v-model="amp.loadType" inputId="reactiveLoad" value="reactive" :disabled="amp == null" />
-                            <label for="reactiveLoad" v-tooltip="'The plate is connected to an output transformer or other reactive load'">
+                            <label for="reactiveLoad" v-tooltip="'The plate is connected to an output transformer or other reactive load, and the load is the full plate-to-plate impedance of the primary winding'">
                                 Reactive
                             </label>
                         </div>
