@@ -24,6 +24,10 @@ abstract class Triode extends TubeModel {
     type: 'triode' = 'triode'; 
 }
 
+abstract class Pentode extends TubeModel {
+    type : 'pentode' = 'pentode';
+}
+
 interface KorenParams {
     type: 'koren',
     mu: number;
@@ -54,6 +58,26 @@ class KorenTriode extends Triode {
 //        // https://www.dmitrynizh.com/tubeparams_image.htm#my_own_models
 //        return Math.sqrt(this.Kvb + Vp*Vp) * Math.log(Math.exp((this.Kp / Vp) * Math.pow(Ip * this.Kg1 / 2, 1 / this.ex)) - 1) / this.Kp - Math.sqrt(this.Kvb + Vp * Vp) / this.mu - this.Vct;
 //    }
+}
+
+class KorenPentode extends Pentode {
+    constructor(ampState: AmpState, private params: KorenParams) {
+        super(ampState);
+    }
+    
+    Ip(Vg: number, Vp: number) {
+        // https://www.normankoren.com/Audio/Tubemodspice_article.html
+        if (this.ampState.mode === 'triode') {
+            const V1 = Vp * Math.log(1 + Math.exp(this.params.Kp * ((1 / this.params.mu) + (Vg + this.params.Vct) / Math.sqrt(this.params.Kvb + Vp * Vp)))) / this.params.Kp;
+            return Math.pow(V1, this.params.ex) * (1 + Math.sign(V1)) / this.params.Kg1;
+        } else {
+            console.assert(this.ampState.Vg2 !== undefined);
+            const t = this.ampState.mode === 'ultralinear' ? this.ampState.ultralinearTap/100 : this.ampState.mode === 'pentode' ? 0 : 1; 
+            const Vg2 = this.ampState.Vg2! * (1 - t) + Vp * t;
+            const V1 = Vg2 * Math.log(1 + Math.exp((1/this.params.mu + Vg/Vg2)*this.params.Kp)) / this.params.Kp;
+            return (Math.pow(V1, this.params.ex) + Math.sign(V1) * Math.pow(V1, this.params.ex)) * Math.atan(Vp / this.params.Kvb) / this.params.Kg1;
+        }
+    }
 }
 
 interface AyumiParams {
@@ -132,30 +156,6 @@ class AyumiTriode extends Triode {
         const Iplim = (1 - this.params.Xg) * this.params.Glim * Math.pow(Vp, 1.5);  // B.30
         
         return Math.max(Math.min(Ik - Ig, Iplim), 0);       // B.31
-    }
-}
-
-abstract class Pentode extends TubeModel {
-    type : 'pentode' = 'pentode';
-}
-
-class KorenPentode extends Pentode {
-    constructor(ampState: AmpState, private params: KorenParams) {
-        super(ampState);
-    }
-    
-    Ip(Vg: number, Vp: number) {
-        // https://www.normankoren.com/Audio/Tubemodspice_article.html
-        if (this.ampState.mode === 'triode') {
-            const V1 = Vp * Math.log(1 + Math.exp(this.params.Kp * ((1 / this.params.mu) + (Vg + this.params.Vct) / Math.sqrt(this.params.Kvb + Vp * Vp)))) / this.params.Kp;
-            return Math.pow(V1, this.params.ex) * (1 + Math.sign(V1)) / this.params.Kg1;
-        } else {
-            console.assert(this.ampState.Vg2 !== undefined);
-            const t = this.ampState.mode === 'ultralinear' ? this.ampState.ultralinearTap/100 : this.ampState.mode === 'pentode' ? 0 : 1; 
-            const Vg2 = this.ampState.Vg2! * (1 - t) + Vp * t;
-            const V1 = Vg2 * Math.log(1 + Math.exp((1/this.params.mu + Vg/Vg2)*this.params.Kp)) / this.params.Kp;
-            return (Math.pow(V1, this.params.ex) + Math.sign(V1) * Math.pow(V1, this.params.ex)) * Math.atan(Vp / this.params.Kvb) / this.params.Kg1;
-        }
     }
 }
 

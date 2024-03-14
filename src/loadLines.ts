@@ -5,11 +5,18 @@ import type { AmpState } from './amp';
 
 import simplify from 'simplify-js';
 
-export abstract class DCLoadLine {
+export interface LoadLine {
+    I(V: number) : number;
+    V(I: number) : number;
+    getLine(): Point[];
+}
+
+export abstract class DCLoadLine implements LoadLine {
     constructor(protected ampState: Readonly<AmpState>) {};
 
     abstract I(V: number): number;
     abstract V(I: number): number;
+    abstract get R(): number | number[];
     abstract Vq(): number;
     abstract Iq(): number;
     abstract getLine(): Point[];
@@ -24,6 +31,10 @@ class DCResistiveLoadLine extends DCLoadLine {
     V(I: number) {
         const R = this.ampState.Rp + this.ampState.Rk;
         return this.ampState.Bplus - I * R;
+    }
+
+    get R() : number {
+        return this.ampState.Rp + this.ampState.Rk;
     }
 
     Iq() {
@@ -50,6 +61,10 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
         return this.ampState.Bplus + this.ampState.Rp * (this.ampState.Iq - I);
     }
     
+    get R() : number {
+        return this.ampState.Rp;
+    }
+
     Iq() {
         return this.ampState.Iq;
     }
@@ -103,6 +118,10 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
         }
     }
     
+    get R() {
+        return [this.Rpb, this.Rpa];
+    }
+
     Iq() {
         return this.ampState.Iq;
     }
@@ -120,7 +139,7 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
     }
 }
 
-class CathodeLoadLine {
+export class CathodeLoadLine implements LoadLine {
     constructor(private ampState: Readonly<AmpState>) {}
     
     I(Vg: number): number {
@@ -164,13 +183,8 @@ class CathodeLoadLine {
     }
 }
 
-class ACLoadLine {
+export class ACLoadLine implements LoadLine {
     constructor(private ampState: Readonly<AmpState>) {
-    }
-
-    get Z() {
-        const R = this.ampState.Rp + this.ampState.Rk;
-        return (R * this.ampState.Znext!) / (R + this.ampState.Znext!);
     }
 
     I(V: number): number {
@@ -181,6 +195,11 @@ class ACLoadLine {
         return this.Z * (this.ampState.Iq - I) + this.ampState.Vq;
     }
     
+    get Z() {
+        const R = this.ampState.Rp + (this.ampState.cathodeBypass ? 0 : this.ampState.Rk);
+        return (R * this.ampState.Znext!) / (R + this.ampState.Znext!);
+    }
+
     getLine(): Point[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.V(0), y: 0};
@@ -188,7 +207,7 @@ class ACLoadLine {
     }
 }
 
-const loadLineFactory = {
+export const loadLineFactory = {
     createDCLoadLine: (topology: 'pp' | 'se', loadType: 'resistive' | 'reactive', ampState : Readonly<AmpState>) => {
         if (loadType === "reactive") {
             if (topology === 'pp') {
@@ -202,18 +221,16 @@ const loadLineFactory = {
     },
 }
 
-const intersectCharacteristicWithLoadLineV = (model: TubeModel, Vg: number, loadLine: DCLoadLine): number => {
+export function intersectCharacteristicWithLoadLineV(model: TubeModel, Vg: number, loadLine: LoadLine): number {
     // find intersection of loadline with characteristic curve at Vg and return Vq
     return findRootWithBisection((Vq) => {
         return model.Ip(Vg, Vq) - loadLine.I(Vq);
     }, 0, 5000, 1000, 0.0000001, 0.0000001);        
 }
 
-const intersectLoadLines = (loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number => {
+export function intersectLoadLines(loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number {
     return findRootWithBisection((Vg) => {
         const Ip = cathodeLoadLine.I(Vg);
         return loadLine.V(Ip) - tubeModel.Vp(Vg, Ip);
     }, -200, 0, 1000, 0.0000001, 0.0000001)
 }
-
-export { loadLineFactory, intersectLoadLines, intersectCharacteristicWithLoadLineV, ACLoadLine, CathodeLoadLine }

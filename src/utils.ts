@@ -84,10 +84,10 @@ const range = (start: number, stop: number, step: number): number[] =>
 const clamp = (x: number, min: number | undefined, max: number | undefined): number => {
     let result = x;
     if (min !== undefined) {
-        result = Math.max(x, min);
+        result = Math.max(result, min);
     }
     if (max !== undefined) {
-        result = Math.min(x, max);
+        result = Math.min(result, max);
     }
     return result;
 };

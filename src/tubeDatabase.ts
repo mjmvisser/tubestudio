@@ -77,7 +77,7 @@ export const tubeDatabase : TubeInfo[] = [
             maxVp: 700,
             maxIp: 0.400,
             minVg: -80,
-            maxVg: 0,
+            maxVg: 10,
             maxVg2: 450,
             gridStep: 5,
         },
