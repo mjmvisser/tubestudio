@@ -1,12 +1,15 @@
 {
   "name": "tubestudio",
   "version": "0.0.0",
+  "homepage": "https://mjmvisser.github.io/tubestudio/",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "chart.js": "^4.4.1",
@@ -23,6 +26,7 @@
     "@vitejs/plugin-vue": "^4.5.2",
     "@vue/tsconfig": "^0.5.1",
     "autoprefixer": "^10.4.17",
+    "gh-pages": "^6.1.1",
     "postcss": "^8.4.33",
     "typescript": "^5.3.3",
     "vite": "^5.0.10",
