@@ -282,7 +282,7 @@ const chartData = computed(() : ChartData<'scatter'> => {
 const chartOptions = computed(() : ChartOptions<'scatter'> => {
     const aspectRatio = 1.75;
 
-    if (amp) {
+    if (tubeParams.value && amp) {
         return {
             animation: false,
             aspectRatio: aspectRatio,
