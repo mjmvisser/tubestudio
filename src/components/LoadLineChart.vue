@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, watchEffect } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
+import type { UnwrapNestedRefs } from 'vue';
 import type { Ref } from 'vue';
 import { Scatter } from 'vue-chartjs'
 import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js'
@@ -7,7 +8,8 @@ import type { ChartData, ChartDataset, ChartOptions, Tick, TooltipItem } from 'c
 import { tubeDatabase } from '@/tubeDatabase';
 import type { TubeInfo } from '@/tubeDatabase';
 import { tubeFactory } from '@/tubeModels';
-import { Amp, Point } from '@/amp';
+import { Amp } from '@/amp';
+import type { Point, VgVpIp } from '@/amp';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
@@ -59,7 +61,7 @@ const selectedModel : Ref<number | null> = ref(null);
 //     inputHeadroom: 0.0001
 // });
 
-let amp = null;
+let amp : UnwrapNestedRefs<Amp> | null = null;
 
 watch(selectedTube, (index) => {
     if (index !== null) {
@@ -75,7 +77,7 @@ watch(selectedTube, (index) => {
 });
 
 watch(selectedModel, (index) => {
-    if (index !== null && tubeParams.value !== null) {
+    if (amp && index !== null && tubeParams.value !== null) {
         amp.model = tubeFactory.createTube(tubeParams.value.type, amp, tubeParams.value.models[index]);
     }
 });
@@ -121,10 +123,30 @@ function proportionalStep(value: number) {
 const chartData = computed(() : ChartData<'scatter'> => {
     let datasets : ChartDataset<'scatter'>[] = [];
 
+    tubeParams.value;
+
+    // need this so Vue "knows" chartData depends on these values
+    amp?.topology;
+    amp?.mode;
+    amp?.Bplus;
+    amp?.Iq;
+    amp?.Vq;
+    amp?.Vg;
+    amp?.Vg2;
+    amp?.biasMethod;
+    amp?.loadType;
+    amp?.Rp;
+    amp?.Rk;
+    amp?.cathodeBypass;
+    amp?.Znext;
+    amp?.ultralinearTap;
+    amp?.inputHeadroom;
+    amp?.model;
+
     console.log("in chartData");
 
-    if (tubeParams.value != null) {
-        datasets = datasets.concat(amp.graphVgVpIp().map((gridCurve: { Vg: string; VpIp: any; }) => ({
+    if (amp) {
+        datasets = datasets.concat(amp.graphVgVpIp().map((gridCurve: VgVpIp) => ({
             label: 'Vg=' + gridCurve.Vg + 'V',
             showLine: true,
             pointStyle: false,
@@ -149,16 +171,8 @@ const chartData = computed(() : ChartData<'scatter'> => {
             data: amp.graphPp(),
         });
 
-        const R = amp.R();
-        let Rtext = '';
-        try {
-            Rtext = R.toFixed() + 'Ω';
-        } catch (err) {
-            Rtext = R[0].toFixed()  + 'Ω Class B / ' + R[1].toFixed() + 'Ω Class A';
-        }
-
         datasets.push({
-            label: amp.loadType[0].toUpperCase() + amp.loadType.slice(1) + ' DC Load: ' + Rtext,
+            label: amp.loadType[0].toUpperCase() + amp.loadType.slice(1) + ' DC Load: ' + amp.dcLoadLineInfo(),
             showLine: true,
             pointStyle: false,
             pointHitRadius: 5,
@@ -171,7 +185,7 @@ const chartData = computed(() : ChartData<'scatter'> => {
         });
 
         datasets.push({
-            label: 'AC Load: ' + amp.Z().toFixed() + 'Ω',
+            label: 'AC Load: ' + amp.acLoadLineInfo(),
             showLine: true,
             pointStyle: false,
             pointHitRadius: 5,
@@ -183,19 +197,19 @@ const chartData = computed(() : ChartData<'scatter'> => {
             data: amp.graphACLoadLine()
         });
 
-        //    datasets.push({
-        //      label: 'Cathode Load: ' + amp.Rk?.toFixed() + 'Ω',
-        //      showLine: true,
-        //      pointStyle: false,
-        //      pointHitRadius: 5,
-        //      borderColor: 'rgb(255,0,255)',
-        //      backgroundColor: 'rgb(255,0,255)',
-        //      borderWidth: 2.5,
-        //      fill: false,
-        //      lineTension: 0,
-        //      data: 
-        //        amp.graphCathodeLoadLine(),
-        //    });
+           datasets.push({
+             label: 'Cathode Load: ' + amp.Rk?.toFixed() + 'Ω',
+             showLine: true,
+             pointStyle: false,
+             pointHitRadius: 5,
+             borderColor: 'rgb(255,0,255)',
+             backgroundColor: 'rgb(255,0,255)',
+             borderWidth: 2.5,
+             fill: false,
+//             lineTension: 0,
+             data: 
+               amp.graphCathodeLoadLine(),
+           });
 
         datasets.push({
             label: 'Operating Point',
@@ -207,68 +221,71 @@ const chartData = computed(() : ChartData<'scatter'> => {
             data: amp.graphOperatingPoint()
         });
 
-        datasets.push({
-            label: 'Vg=' + amp.Vg?.toFixed(1) + 'V',
-            showLine: true,
-            pointStyle: false,
-            pointHitRadius: 2,
-            borderColor: 'rgb(0,0,255)',
-            backgroundColor: 'rgb(0,0,255)',
-            borderWidth: 1.5,
-            fill: false,
-            data: amp.graphVpIp(amp.Vg),
-        });
+        if (amp.Vg !== undefined) {
+            datasets.push({
+                label: 'Vg=' + amp.Vg?.toFixed(1) + 'V',
+                showLine: true,
+                pointStyle: false,
+                pointHitRadius: 2,
+                borderColor: 'rgb(0,0,255)',
+                backgroundColor: 'rgb(0,0,255)',
+                borderWidth: 1.5,
+                fill: false,
+                data: amp.graphVpIp(amp.Vg),
+            });
+        }
 
-        const minVg = amp.Vg - amp.inputHeadroom;
+        if (amp.Vg !== undefined && amp.inputHeadroom !== undefined) {
+            const minVg = amp.Vg - amp.inputHeadroom;
 
-        datasets.push({
-            label: 'Vg=' + minVg?.toFixed(1) + 'V',
-            showLine: true,
-            pointStyle: false,
-            pointHitRadius: 2,
-            borderColor: 'rgb(0,255,0)',
-            backgroundColor: 'rgb(0,255,0)',
-            borderWidth: 1.5,
-            fill: false,
-            data: amp.graphVpIp(minVg)
-        });
+            datasets.push({
+                label: 'Vg=' + minVg?.toFixed(1) + 'V',
+                showLine: true,
+                pointStyle: false,
+                pointHitRadius: 2,
+                borderColor: 'rgb(0,255,0)',
+                backgroundColor: 'rgb(0,255,0)',
+                borderWidth: 1.5,
+                fill: false,
+                data: amp.graphVpIp(minVg)
+            });
 
-        datasets.push({
-            label: 'Headroom',
-            showLine: true,
-            pointRadius: 5,
-            borderColor: 'rgb(0,255,0)',
-            backgroundColor: 'rgb(0,255,0)',
-            fill: true,
-            data: amp.graphHeadroom()
-        });
+            datasets.push({
+                label: 'Headroom',
+                showLine: true,
+                pointRadius: 5,
+                borderColor: 'rgb(0,255,0)',
+                backgroundColor: 'rgb(0,255,0)',
+                fill: true,
+                data: amp.graphHeadroom()
+            });
 
-        const maxVg = amp.Vg + amp.inputHeadroom;
+            const maxVg = amp.Vg + amp.inputHeadroom;
 
-        datasets.push({
-            label: 'Vg=' + maxVg?.toFixed(1) + 'V',
-            showLine: true,
-            pointStyle: false,
-            pointHitRadius: 2,
-            borderColor: 'rgb(0,255,0)',
-            backgroundColor: 'rgb(0,255,0)',
-            borderWidth: 1.5,
-            fill: false,
-            data: amp.graphVpIp(maxVg)
-        });
-
+            datasets.push({
+                label: 'Vg=' + maxVg?.toFixed(1) + 'V',
+                showLine: true,
+                pointStyle: false,
+                pointHitRadius: 2,
+                borderColor: 'rgb(0,255,0)',
+                backgroundColor: 'rgb(0,255,0)',
+                borderWidth: 1.5,
+                fill: false,
+                data: amp.graphVpIp(maxVg)
+            });
+        }
     }
 
     return { datasets: datasets };
 });
 
 const chartOptions = computed(() : ChartOptions<'scatter'> => {
-    amp;
+    const aspectRatio = 1.75;
 
-    if (tubeParams.value !== null) {
+    if (amp) {
         return {
             animation: false,
-            responsive: true,
+            aspectRatio: aspectRatio,
             hover: { mode: 'index' },
             plugins: {
                 title: {
@@ -315,18 +332,20 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
             },
         };
     } else {
-        return {};
+        return {
+            animation: false,
+            aspectRatio: aspectRatio,
+        };
     }
 });
 
 </script>
 
 <template>
-    <div class="grid align-items-center">
-        <div class="col-12 py-2">
-            <Scatter id="tube-chart" :options="chartOptions" :data="chartData" />
-        </div>
-
+    <div class="pl-4 col-12 chart-container">
+        <Scatter id="tube-chart" :options="chartOptions" :data="chartData" />
+    </div>
+    <div class="pl-4 grid align-items-center">
         <div class="grid col-12 align-items-center">
             <div class="col-4 py-2">
                 <div class="text-left">
@@ -408,14 +427,16 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     <InputNumber v-model="amp.Bplus" :min=0 :max=amp.limits.maxVp :maxFractionDigits=2 showButtons
                         :step="proportionalStep(amp.Bplus)" :disabled="amp == null" />
                 </div>
-                <div class="col-3 py-2">
-                    <label>Output Power (W)</label>
-                </div>
-                <div class="col-3 py-2">
-                    <div class="flex flex-column">
-                        TBD
+                <template v-if="amp.model">
+                    <div class="col-3 py-2">
+                        <label>Output Power (W)</label>
                     </div>
-                </div>
+                    <div class="col-3 py-2">
+                        <div class="flex flex-column">
+                            TBD
+                        </div>
+                    </div>
+                </template>
             </div>
 
             <div class="grid surface-ground col-12 align-items-center border-y-1 border-400">
@@ -437,7 +458,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     </label>
                     <div class="flex align-items-left">
                         <InputNumber v-model="Iq_ma" inputId="Iq" :min=0.001 :max="amp.limits.maxIp * 1000" :maxFractionDigits=2
-                            :step="proportionalStep(Iq_ma)" showButtons :disabled="amp == null" />
+                            :step="proportionalStep(Iq_ma!)" showButtons :disabled="amp == null" />
                     </div>
                 </div>
                 <template v-if="amp.model">
@@ -511,7 +532,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                 </template>
             </div>
 
-            <div class="grid surface-ground col-12 align-items-center border-y-1 border-400">
+            <div v-if="amp.model" class="grid surface-ground col-12 align-items-center border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The input impedance of the following amplifier stage'">
                         Next Stage Impedance (Ω)
@@ -523,18 +544,19 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
             </div>
 
-            <div v-if="amp.type === 'pentode' || amp.type === 'tetrode'" class="grid col-12 align-items-center">
+            <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The voltage at the screen or suppressor grid'">
                         Screen Voltage (V)
                     </label>
                 </div>
                 <div class="col-9 py-2">
-                    <InputNumber v-model="amp.Vg2" :min=0 :max="amp.limits.maxVg2" :maxFractionDigits=0 :step=1 showButtons />
+                    <InputNumber v-model="amp.Vg2" :min=0 :max="amp.limits.maxVg2" :maxFractionDigits=0 :step=1 showButtons 
+                        :disabled="amp == null || amp.mode === 'triode'"/>
                 </div>
             </div>
 
-            <div v-if="amp.type === 'pentode' || amp.type === 'tetrode'"
+            <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')"
                 class="grid surface-ground col-12 align-items-center border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The percentage of the signal which appears on the screen-grid'">
@@ -547,7 +569,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
             </div>
 
-            <div class="grid col-12 align-items-center">
+            <div v-if="amp.model" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The maximum amplitude of the input signal'">
                         Input Headroom (±V)
@@ -568,6 +590,5 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
             </div>
 
         </template>
-
     </div>
 </template>

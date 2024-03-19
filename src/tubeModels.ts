@@ -72,7 +72,7 @@ class KorenPentode extends Pentode {
             return Math.pow(V1, this.params.ex) * (1 + Math.sign(V1)) / this.params.Kg1;
         } else {
             console.assert(this.ampState.Vg2 !== undefined);
-            const t = this.ampState.mode === 'ultralinear' ? this.ampState.ultralinearTap/100 : this.ampState.mode === 'pentode' ? 0 : 1; 
+            const t = this.ampState.mode === 'ultralinear' ? this.ampState.ultralinearTap!/100 : this.ampState.mode === 'pentode' ? 0 : 1; 
             const Vg2 = this.ampState.Vg2! * (1 - t) + Vp * t;
             const V1 = Vg2 * Math.log(1 + Math.exp((1/this.params.mu + Vg/Vg2)*this.params.Kp)) / this.params.Kp;
             return (Math.pow(V1, this.params.ex) + Math.sign(V1) * Math.pow(V1, this.params.ex)) * Math.atan(Vp / this.params.Kvb) / this.params.Kg1;

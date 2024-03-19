@@ -9,6 +9,7 @@ export interface LoadLine {
     I(V: number) : number;
     V(I: number) : number;
     getLine(): Point[];
+    info(): string;
 }
 
 export abstract class DCLoadLine implements LoadLine {
@@ -16,10 +17,10 @@ export abstract class DCLoadLine implements LoadLine {
 
     abstract I(V: number): number;
     abstract V(I: number): number;
-    abstract get R(): number | number[];
     abstract Vq(): number;
     abstract Iq(): number;
     abstract getLine(): Point[];
+    abstract info(): string;
 }
 
 class DCResistiveLoadLine extends DCLoadLine {
@@ -31,10 +32,6 @@ class DCResistiveLoadLine extends DCLoadLine {
     V(I: number) {
         const R = this.ampState.Rp + this.ampState.Rk;
         return this.ampState.Bplus - I * R;
-    }
-
-    get R() : number {
-        return this.ampState.Rp + this.ampState.Rk;
     }
 
     Iq() {
@@ -50,21 +47,24 @@ class DCResistiveLoadLine extends DCLoadLine {
         const p2 = {x: this.ampState.Bplus, y: this.I(this.ampState.Bplus)};
         return [p1, p2];
     }
+
+    info() : string {
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return R.toFixed() + 'Ω';
+    }
 }
 
 class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     I(V: number) {
-        return (this.ampState.Bplus - V) / this.ampState.Rp + this.ampState.Iq;
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return (this.ampState.Bplus - V) / R + this.ampState.Iq;
     }
     
     V(I: number) {
-        return this.ampState.Bplus + this.ampState.Rp * (this.ampState.Iq - I);
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return this.ampState.Bplus + R * (this.ampState.Iq - I);
     }
     
-    get R() : number {
-        return this.ampState.Rp;
-    }
-
     Iq() {
         return this.ampState.Iq;
     }
@@ -79,15 +79,22 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
         const p2 = {x: this.V(0), y: 0}
         return [p1, p2]
     }
+
+    info() : string {
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return R.toFixed() + 'Ω';
+    }
 }
 
 class DCPushPullReactiveLoadLine extends DCLoadLine {
     private get Rpa() {
-        return this.ampState.Rp/2;
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return R/2;
     }
 
     private get Rpb() {
-        return this.ampState.Rp/4;
+        const R = this.ampState.Rp + this.ampState.Rk;
+        return R/4;
     }
 
     private get Vlim() {
@@ -118,10 +125,6 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
         }
     }
     
-    get R() {
-        return [this.Rpb, this.Rpa];
-    }
-
     Iq() {
         return this.ampState.Iq;
     }
@@ -136,6 +139,10 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
         const p2 = {x: this.Vlim, y: this.Ilim};
         const p3 = {x: this.V(0), y: 0};
         return [p1, p2, p3];
+    }
+
+    info() : string {
+        return this.Rpb.toFixed()  + 'Ω (Class B) / ' + this.Rpa.toFixed() + 'Ω (Class A)';
     }
 }
 
@@ -167,10 +174,18 @@ export class CathodeLoadLine implements LoadLine {
     }
     
     Rk() {
-        if (this.ampState.model) {
-            return Math.max(0, -this.ampState.Vg! / this.ampState.Iq);
+        if (this.ampState.model && this.ampState.Vg !== undefined) {
+            return Math.max(0, -this.ampState.Vg / this.ampState.Iq);
         } else {
             return 0;
+        }
+    }
+
+    Iq() {
+        if (this.ampState.model && this.ampState.Vg !== undefined) {
+            return Math.max(0, -this.ampState.Vg / this.ampState.Rk);
+        } else {
+            return this.ampState.Iq;
         }
     }
 
@@ -180,6 +195,10 @@ export class CathodeLoadLine implements LoadLine {
             const V = this.V(I);
             return {x: V, y: I};
           }), 0.00001, true);
+    }
+
+    info() : string {
+        return this.Rk().toFixed() + 'Ω';
     }
 }
 
@@ -204,6 +223,10 @@ export class ACLoadLine implements LoadLine {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.V(0), y: 0};
         return [p1, p2];
+    }
+
+    info() : string {
+        return this.Z.toFixed() + 'Ω';
     }
 }
 

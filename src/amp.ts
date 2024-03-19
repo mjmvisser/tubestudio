@@ -30,14 +30,14 @@ export interface AmpState {
     Rk: number;
     cathodeBypass: boolean;
     Znext?: number;
-    ultralinearTap: number;
+    ultralinearTap?: number;
     inputHeadroom?: number;
     model?: TubeModel;
 }
 
 export class Amp implements AmpState {
     private _topology: 'se' | 'pp';
-    private _mode?: 'triode' | 'pentode';
+    private _mode?: 'triode' | 'pentode' | 'ultralinear';
     private _Bplus: number;
     private _Vq: number;
     private _Iq: number;
@@ -47,13 +47,13 @@ export class Amp implements AmpState {
     private _loadType: 'resistive' | 'reactive';
     private _Rp: number;
     private _Rk: number;
-    private _Znext: number;
+    private _Znext?: number;
     private _model?: TubeModel;
     private _dcLoadLine: DCLoadLine;
     private _acLoadLine: ACLoadLine;
     private _cathodeLoadLine: CathodeLoadLine;
 
-    constructor(public name: string, public type: 'triode' | 'tetrode' | 'pentode', private defaults: TubeDefaults, private limits: TubeLimits) {
+    constructor(public name: string, public type: 'triode' | 'tetrode' | 'pentode', public defaults: TubeDefaults, public limits: TubeLimits) {
         this._Vq = 0;
         this._topology = type === 'triode' ? 'se' : 'pp';
         if (type !== 'triode') {
@@ -75,14 +75,13 @@ export class Amp implements AmpState {
         this._cathodeLoadLine = new CathodeLoadLine(this as Readonly<AmpState>);
 
         this._Vq = this._dcLoadLine.Vq();
-        if (this.type !== 'triode' && this.mode === 'triode') {
-            this._Vg2 = this.Bplus;
-        }
     }
 
     private setVq(Vq: number) {
-        this._Vq = clamp(Vq, 0, this.limits.maxVp);
-        console.log(`Vq=${Vq}`);
+        if (this.loadType === 'resistive') {
+            this._Vq = clamp(Vq, 0, this.limits.maxVp);
+            console.log(`Vq=${this._Vq}`);
+        }
     }
 
     private setIq(Iq: number) {
@@ -91,23 +90,23 @@ export class Amp implements AmpState {
     }
 
     private setVg(Vg: number) {
-        this._Vg = clamp(Vg!, this.limits.minVg, this.limits.maxVg);        
-        console.log(`Vg=${Vg}`);
+        this._Vg = clamp(Vg, this.limits.minVg, this.limits.maxVg);        
+        console.log(`Vg=${this._Vg}`);
     }
 
     private setVg2(Vg2: number) {
-        this._Vg2 = clamp(Vg2!, 0, this.limits.maxVg2);
-        console.log(`Vg2=${Vg2}`);
+        this._Vg2 = clamp(Vg2, 0, this.limits.maxVg2);
+        console.log(`Vg2=${this._Vg2}`);
     }
 
     private setRp(Rp: number) {
         this._Rp = Math.max(0, Rp);
-        console.log(`Rp=${Rp}`);
+        console.log(`Rp=${this._Rp}`);
     }
 
     private setRk(Rk: number) {
         this._Rk = Math.max(0, Rk);
-        console.log(`Rk=${Rk}`);
+        console.log(`Rk=${this._Rk}`);
     }
 
     get topology() { return this._topology; }
@@ -121,22 +120,21 @@ export class Amp implements AmpState {
     get model() { return this._model; }
     set model(model) {
         this._model = model;
-        if (this._model) {
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
+        if (this.model) {
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
             this.setRk(this._cathodeLoadLine.Rk());
         }
     }
 
     get mode() { return this._mode; }
     set mode(mode) {
-        if (this._model) {
+        if (this.model) {
             this._mode = mode;
-            if (this.type !== 'triode' && this._mode === 'triode') {
-                this.setVg2(this.Bplus);
+            if (this.mode === 'triode') {
                 this.setRk(this._cathodeLoadLine.Rk());
             }
             if (this._model) {
-                this.setVg(this._model.Vg(this._Vq, this._Iq));
+                this.setVg(this._model.Vg(this.Vq, this.Iq));
                 this.setRk(this._cathodeLoadLine.Rk());
             }
         }
@@ -146,21 +144,18 @@ export class Amp implements AmpState {
     set Bplus(Bplus) { 
         this._Bplus = Bplus;
         this.setVq(this._dcLoadLine.Vq());
-        if (this._model) {
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
-        }
-        if (this.type !== 'triode' && this._mode === 'triode') {
-            this.setVg2(this.Bplus);
+        if (this.model) {
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
         }
     }
 
-    get Vq() { return this._Vq; }
+    get Vq() { return this.loadType === 'resistive' ? this._Vq : this._Bplus; }
     set Vq(Vq) {
         this.setVq(Vq);
         this.setIq(this._dcLoadLine.Iq());
-        if (this._model) {
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
-            if (this._biasMethod === 'cathode') {
+        if (this.model) {
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
+            if (this.biasMethod === 'cathode') {
                 this.setRk(this._cathodeLoadLine.Rk());
             }
         }
@@ -170,35 +165,38 @@ export class Amp implements AmpState {
     set Iq(Iq) {
         this.setIq(Iq);
         this.setVq(this._dcLoadLine.Vq());
-        if (this._model) {
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
+        if (this.model) {
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
         }
     }
     
     get Vg() { return this._Vg; }
     set Vg(Vg) {
-        console.assert(Vg !== undefined);
-        this.setVg(Vg);
-        if (this._model) {
-            // TODO: move this into the loadline
-            if (this._loadType === 'resistive') {
-                this.setVq(intersectCharacteristicWithLoadLineV(this._model, this._Vg, this._dcLoadLine));
+        if (Vg !== undefined) {
+            this.setVg(Vg);
+            if (this.model && this.Vg !== undefined) {
+                // TODO: move this into the loadline
+                if (this.loadType === 'resistive') {
+                    this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+                }
+                this.setIq(this.model.Ip(this.Vg, this.Vq)); 
+                this.setRk(this._cathodeLoadLine.Rk());
             }
-            this.setIq(this._model.Ip(this._Vg, this._Vq)); 
-            this.setRk(this._cathodeLoadLine.Rk());
         }
     }
    
-    get Vg2() { return this._Vg2; }
+    get Vg2() { return this._mode === 'triode' ? this._Bplus : this._Vg2; }
     set Vg2(Vg2) {
-        this.setVg2(Vg2);
-        if (this._model) {
-            // TODO: move this to loadline
-            if (this.loadType === 'resistive') {
-                this.setVq(intersectCharacteristicWithLoadLineV(this._model, this._Vg, this._dcLoadLine));
+        if (Vg2 !== undefined) {
+            this.setVg2(Vg2);
+            if (this.model && this.Vg !== undefined) {
+                // TODO: move this to loadline
+                if (this.loadType === 'resistive') {
+                    this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+                }
+                this.setVg(this.model.Vg(this.Vq, this.Iq));
+                this.setRk(this._cathodeLoadLine.Rk());
             }
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
-            this.setRk(this._cathodeLoadLine.Rk());
         }
     }
 
@@ -209,7 +207,7 @@ export class Amp implements AmpState {
 
         if (biasMethod === 'cathode' && previousBiasMethod === 'fixed') {
             // switching from fixed to cathode, reset Rk
-            if (this._model) {
+            if (this.model) {
                 this.setRk(this._cathodeLoadLine.Rk());
             }
         }
@@ -221,18 +219,16 @@ export class Amp implements AmpState {
         this._loadType = loadType;
 
         if (loadType !== previousLoadType) {
-            this._dcLoadLine = loadLineFactory.createDCLoadLine(this._topology, this._loadType, this as Readonly<AmpState>);
+            this._dcLoadLine = loadLineFactory.createDCLoadLine(this.topology, this.loadType, this as Readonly<AmpState>);
         }
       
         if (loadType === 'resistive' && previousLoadType === 'reactive') {
-            this.setVq(2 * this.defaults.Bplus / 3);
             this.setIq(this._dcLoadLine.Iq());
-        } else if (loadType === 'reactive' && previousLoadType === 'resistive') {
-            // reactive quiescent voltage is same as B+
-            this.setVq(this._Bplus);
         }
-        this.setVg(this._model.Vg(this._Vq, this._Iq));
-        this.setRk(this._cathodeLoadLine.Rk());
+        if (this.model) {
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
+            this.setRk(this._cathodeLoadLine.Rk());
+        }
 }
 
     get Rp() { return this._Rp; }
@@ -240,8 +236,8 @@ export class Amp implements AmpState {
         this.setRp(Rp);
         this.setIq(this._dcLoadLine.Iq());
         this.setVq(this._dcLoadLine.Vq());
-        if (this._model) { 
-            this.setVg(this._model.Vg(this._Vq, this._Iq));
+        if (this.model) { 
+            this.setVg(this.model.Vg(this.Vq, this.Iq));
             this.setRk(this._cathodeLoadLine.Rk());
         }
     }
@@ -249,37 +245,42 @@ export class Amp implements AmpState {
     get Rk() { return this.biasMethod === 'cathode' ? this._Rk : 0; }
     set Rk(Rk) {
         this.setRk(Rk);
-        if (this._model) {
-            this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this._model));
-            if (this._loadType === 'resistive') {
-                this.setIq(this._cathodeLoadLine.I(this._Vg));
-                this.setVq(this._cathodeLoadLine.V(this._Iq));
-            } else {
-                this.setIq(this._model.Ip(this._Vg, this._Vq));
-            }
+        if (this.model && this.Vg !== undefined) {
+            this.setIq(this._cathodeLoadLine.Iq());
+            this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
+            if (this.loadType === 'resistive') {
+                this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+           }
         }
     }
 
     get Znext() { return this.loadType === 'resistive' ? this._Znext : undefined; }
-    set Znext(Znext: number) {
+    set Znext(Znext) {
         this._Znext = Znext;
     }
 
-    public ultralinearTap: number = null;
-    public inputHeadroom: number = null;
-    public cathodeBypass: boolean = true;
+    ultralinearTap?: number;
+    inputHeadroom?: number;
+    cathodeBypass: boolean = true;
 
-    public R() { return this._dcLoadLine.R; }
-    public Z() { return this._acLoadLine.Z; }
-      
+    dcLoadLineInfo() : string {
+        return this._dcLoadLine.info();
+    }
+
+    acLoadLineInfo(): string {
+        return this._acLoadLine.info();
+    }
+
     outputHeadroom() : number[] {
-        if (this._dcLoadLine && this._model && this.inputHeadroom) {
-            const minVg = this._Vg - this.inputHeadroom;
-            const maxVg = this._Vg + this.inputHeadroom;
-            const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const maxVp = intersectCharacteristicWithLoadLineV(this._model, minVg, loadLine);
-            const minVp = intersectCharacteristicWithLoadLineV(this._model, maxVg, loadLine);
+        if (this._dcLoadLine && this.model && this.inputHeadroom !== undefined && this.Vg !== undefined ) {
+            const minVg = this.Vg - this.inputHeadroom;
+            const maxVg = this.Vg + this.inputHeadroom;
+            const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine);
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine);
             return [minVp - this.Vq, maxVp - this.Vq];
+        } else {
+            return [];
         }
     }
 
@@ -292,10 +293,10 @@ export class Amp implements AmpState {
     }
 
     graphCathodeLoadLine(): Point[] {
-        if (this._cathodeLoadLine && this._model) {
+        if (this._cathodeLoadLine && this.model) {
             return simplify(range(this.limits.minVg, this.limits.maxVg, this.limits.gridStep / 10).map(Vg => {
                 const I = this._cathodeLoadLine.I(Vg);
-                const V = this._model!.Vp(Vg, I);
+                const V = this.model!.Vp(Vg, I);
                 return {x: V, y: I};
             }), 0.00001, true);
         } else {
@@ -304,8 +305,8 @@ export class Amp implements AmpState {
     }
 
     graphVpIp(Vg: number): Point[]  {
-        if (this._model) {
-            return simplify(range(0, this.limits.maxVp, 1).map(Vp => ({x: Vp, y: this._model!.Ip(Vg, Vp)})), 0.000005, true);
+        if (this.model) {
+            return simplify(range(0, this.limits.maxVp, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp)})), 0.000005, true);
         } else {
             return [];
         }
@@ -326,7 +327,7 @@ export class Amp implements AmpState {
         if (this._dcLoadLine) {
             const Vq = this.Vq;
             const Iq = this._dcLoadLine.I(Vq);
-            const Vg = this._model?.Vg(Vq, Iq);
+            const Vg = this.model?.Vg(Vq, Iq);
             return [{x: Vq, y: Iq, Vg: Vg}];
         } else {
             return [];
@@ -334,12 +335,12 @@ export class Amp implements AmpState {
     }
     
     graphHeadroom(): Point[] {
-        if (this._dcLoadLine && this._model && this.inputHeadroom) {
-            const minVg = this._Vg - this.inputHeadroom;
-            const maxVg = this._Vg + this.inputHeadroom;
+        if (this._dcLoadLine && this.model && this.inputHeadroom !== undefined && this.Vg !== undefined) {
+            const minVg = this.Vg - this.inputHeadroom;
+            const maxVg = this.Vg + this.inputHeadroom;
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const maxVp = intersectCharacteristicWithLoadLineV(this._model, minVg, loadLine);
-            const minVp = intersectCharacteristicWithLoadLineV(this._model, maxVg, loadLine);
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine);
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine);
 
             let data = [];
             let loadLineData = loadLine.getLine();
