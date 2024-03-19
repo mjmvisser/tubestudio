@@ -84,6 +84,10 @@ watch(selectedModel, (index) => {
 
 const Iq_ma = computed({
     get() {
+        // force update when these change 
+        selectedTube.value;
+        selectedModel.value;
+
         if (amp) {
             return amp.Iq * 1000;
         } else {
@@ -197,19 +201,19 @@ const chartData = computed(() : ChartData<'scatter'> => {
             data: amp.graphACLoadLine()
         });
 
-           datasets.push({
-             label: 'Cathode Load: ' + amp.Rk?.toFixed() + 'Ω',
-             showLine: true,
-             pointStyle: false,
-             pointHitRadius: 5,
-             borderColor: 'rgb(255,0,255)',
-             backgroundColor: 'rgb(255,0,255)',
-             borderWidth: 2.5,
-             fill: false,
-//             lineTension: 0,
-             data: 
-               amp.graphCathodeLoadLine(),
-           });
+//         datasets.push({
+//             label: 'Cathode Load: ' + amp.Rk?.toFixed() + 'Ω',
+//             showLine: true,
+//             pointStyle: false,
+//             pointHitRadius: 5,
+//             borderColor: 'rgb(255,0,255)',
+//             backgroundColor: 'rgb(255,0,255)',
+//             borderWidth: 2.5,
+//             fill: false,
+// //             lineTension: 0,
+//             data: 
+//             amp.graphCathodeLoadLine(),
+//         });
 
         datasets.push({
             label: 'Operating Point',
