@@ -355,7 +355,7 @@ export class Amp implements AmpState {
 
             data.push({x: maxVp, y: loadLine.I(maxVp)});
 
-            return [{x: minVp, y: loadLine.I(minVp), Vg: maxVg}, {x: maxVp, y: loadLine.I(maxVp), Vg: minVg}];
+            return data;
         } else {
             return [];
         }
