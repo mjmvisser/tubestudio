@@ -124,7 +124,7 @@ function proportionalStep(value: number) {
     }
 }
 
-const chartData = computed(() : ChartData<'scatter'> => {
+const characteristicChartData = computed(() : ChartData<'scatter'> => {
     let datasets : ChartDataset<'scatter'>[] = [];
 
     tubeParams.value;
@@ -283,7 +283,7 @@ const chartData = computed(() : ChartData<'scatter'> => {
     return { datasets: datasets };
 });
 
-const chartOptions = computed(() : ChartOptions<'scatter'> => {
+const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
     const aspectRatio = 1.75;
 
     if (tubeParams.value && amp) {
@@ -343,11 +343,77 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
     }
 });
 
+const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
+    tubeParams.value;
+
+    // need this so Vue "knows" chartData depends on these values
+    amp?.topology;
+    amp?.mode;
+    amp?.Bplus;
+    amp?.Iq;
+    amp?.Vq;
+    amp?.Vg;
+    amp?.Vg2;
+    amp?.biasMethod;
+    amp?.loadType;
+    amp?.Rp;
+    amp?.Rk;
+    amp?.cathodeBypass;
+    amp?.Znext;
+    amp?.ultralinearTap;
+    amp?.inputHeadroom;
+    amp?.model;
+
+    if (amp) {
+        const data = {
+            datasets: [
+                {
+                    showLine: true,
+                    pointStyle: false,
+                    borderColor: '#000000',
+                    backgroundColor: '#000000',
+                    data: amp.graphAmplifiedSineWave()
+                }
+            ]
+        };
+        return data as ChartData<'scatter'>;
+    } else {
+        return {
+            datasets: []
+        };
+    }
+});
+
+const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
+    return {
+        animation: false,
+        responsive: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                enabled: false
+            }
+        },
+        scales: {
+            x: {
+                display: false,
+                min: 0,
+                max: 2*Math.PI,
+            },
+            y: {
+                display: false
+            }    
+        }
+    };
+});
+
 </script>
 
 <template>
     <div class="pl-4 col-12 chart-container">
-        <Scatter id="tube-chart" :options="chartOptions" :data="chartData" />
+        <Scatter id="tube-chart" :options="characteristicChartOptions" :data="characteristicChartData" />
     </div>
     <div class="pl-4 grid align-items-center">
         <div class="grid col-12 align-items-center">
@@ -466,19 +532,17 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     </div>
                 </div>
                 <template v-if="amp.model">
-                    <div class="col-2 py-2">
-                        <label v-tooltip="'The DC voltage applied to the control grid'">Grid Bias (V)</label>
-                    </div>
-                    <div class="col-1 py-2">
+                    <div class="col-3 py-2">
                         <div class="flex flex-column align-items-left">
-                            <div>
+                            <label v-tooltip="'The DC voltage applied to the control grid'">Grid Bias (V)</label>
+                            <div class="px-4">
                                 <RadioButton v-model="amp.biasMethod" inputId="cathodeBias" value="cathode"
                                     :disabled="amp == null || amp.model === null" /> 
                                 <label for="cathodeBias" v-tooltip="'The bias voltage is developed across a resistor connected between the cathode and ground (or a negative voltage supply)'">
                                     Cathode
                                 </label>
                             </div>
-                            <div>
+                            <div class="px-4">
                                 <RadioButton v-model="amp.biasMethod" inputId="fixedBias" value="fixed"
                                     :disabled="amp == null || amp.model === null" /> 
                                 <label for="fixedBias" v-tooltip="'The bias voltage is set by a separate bias supply and resistor network, independent of the cathode current'">
@@ -489,24 +553,22 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     </div>
                     <div class="col-3 py-2">
                         <InputNumber v-model="amp.Vg" :min=amp.limits.minVg :max=amp.limits.maxVg 
-                            :step="proportionalStep(amp.Vg)" :maxFractionDigits=2 showButtons :disabled="amp == null || amp.model === null" />
+                            :step="proportionalStep(amp.Vg!)" :maxFractionDigits=2 showButtons :disabled="amp == null || amp.model === null" />
                     </div>
                 </template>                    
             </div>
 
             <div class="grid col-12 align-items-center">
-                <div class="col-1 py-2">
-                    <label v-tooltip="'The resistance or impedence of the load connected to the plate'">Plate Load (Ω)</label>
-                </div>
-                <div class="col-2 py-2">
-                    <div class="flex flex-column align-items-center">
-                        <div>
+                <div class="col-3 py-2">
+                    <div class="flex flex-column align-items-left">
+                        <label v-tooltip="'The resistance or impedence of the load connected to the plate'">Plate Load (Ω)</label>
+                        <div class="px-4">
                             <RadioButton v-model="amp.loadType" inputId="resistiveLoad" value="resistive" :disabled="amp == null" />
                             <label for="resistiveLoad" v-tooltip="'The plate is connected to a resistor or other non-reactive load'">
                                 Resistive
                             </label>
                         </div>
-                        <div>
+                        <div class="px-4">
                             <RadioButton v-model="amp.loadType" inputId="reactiveLoad" value="reactive" :disabled="amp == null" />
                             <label for="reactiveLoad" v-tooltip="'The plate is connected to an output transformer or other reactive load, and the load is the full plate-to-plate impedance of the primary winding'">
                                 Reactive
@@ -518,16 +580,15 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     <InputNumber v-model="amp.Rp" :min=0 :step="proportionalStep(amp.Rp)" showButtons :disabled="amp == null" />
                 </div>
                 <template v-if="amp.model">
-                    <div class="col-2 py-2">
-                        <label v-tooltip="'The value of the cathode bias resistor'">
-                            Cathode Load (Ω)
-                        </label>
-                    </div>
-                    <div class="col-1 py-2">
-                        <Checkbox v-model="amp.cathodeBypass" inputId="cathodeBypass" :binary="true" />
-                        <label for="cathodeByypass" v-tooltip="'A capacitor is connected in parallel with the cathode resistor to allow AC signal to pass unimpeded'">
-                            AC Bypass
-                        </label>
+                    <div class="col-3 py-2">
+                        <label v-tooltip="'The value of the cathode bias resistor'">Cathode Load (Ω)</label>
+                        <div class="px-4">
+                            <Checkbox v-model="amp.cathodeBypass" inputId="cathodeBypass" :binary="true" 
+                                :disabled="amp == null || amp.model === null || amp.biasMethod !== 'cathode'" />
+                            <label for="cathodeBypass" v-tooltip="'A capacitor is connected in parallel with the cathode resistor to allow AC signal to pass unimpeded'">
+                                AC Bypass
+                            </label>
+                        </div>
                     </div>
                     <div class="col-3 py-2">
                         <InputNumber v-model="amp.Rk" :min=0 :step="proportionalStep(amp.Rk)" :maxFractionDigits=0 showButtons
@@ -589,6 +650,7 @@ const chartOptions = computed(() : ChartOptions<'scatter'> => {
                     </label>
                 </div>
                 <div v-if="amp.inputHeadroom" class="col-3 py-2">
+                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData" class="w-8rem h-4rem" />
                     {{  amp.outputHeadroom()[0].toFixed() }} / {{  amp.outputHeadroom()[1].toFixed() }}, {{ (amp.outputHeadroom()[1] - amp.outputHeadroom()[0]).toFixed() }} peak-to-peak
                 </div>
             </div>

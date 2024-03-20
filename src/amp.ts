@@ -360,4 +360,18 @@ export class Amp implements AmpState {
             return [];
         }
     }
+
+    graphAmplifiedSineWave() : Point[] {
+        // simulate amplification of a sine wave
+        if (this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
+            const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
+            return simplify(range(0, 2*Math.PI, 2*Math.PI/360).map(t => {
+                const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
+                const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine);
+                return {x: t, y: Vp};
+            }), 0.0005, true);
+        } else {
+            return [];
+        }
+    }
 }
