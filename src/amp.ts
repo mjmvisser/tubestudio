@@ -368,8 +368,8 @@ export class Amp implements AmpState {
             return simplify(range(0, 2*Math.PI, 2*Math.PI/360).map(t => {
                 const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
                 const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine);
-                return {x: t, y: Vp};
-            }), 0.0005, true);
+                return {x: t, y: Vp - this.Vq};
+            }), 0.001, true);
         } else {
             return [];
         }

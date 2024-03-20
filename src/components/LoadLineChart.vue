@@ -365,18 +365,29 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
     amp?.model;
 
     if (amp) {
-        const data = {
+        return {
             datasets: [
                 {
                     showLine: true,
                     pointStyle: false,
                     borderColor: '#000000',
                     backgroundColor: '#000000',
+                    borderWidth: 1.5,
+                    fill: false,
                     data: amp.graphAmplifiedSineWave()
+                },
+                {
+                    showLine: true,
+                    pointStyle: false,
+                    borderColor: '#8080FF',
+                    backgroundColor: '#8080FF',
+                    borderWidth: 1.5,
+                    borderDash: [10, 10],
+                    fill: false,
+                    data: [{x: 0, y: 0}, {x: 2*Math.PI, y: 0}]
                 }
             ]
         };
-        return data as ChartData<'scatter'>;
     } else {
         return {
             datasets: []
@@ -650,7 +661,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     </label>
                 </div>
                 <div v-if="amp.inputHeadroom" class="col-3 py-2">
-                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData" class="w-8rem h-4rem" />
+                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData" class="w-8rem h-6rem" />
                     {{  amp.outputHeadroom()[0].toFixed() }} / {{  amp.outputHeadroom()[1].toFixed() }}, {{ (amp.outputHeadroom()[1] - amp.outputHeadroom()[0]).toFixed() }} peak-to-peak
                 </div>
             </div>
