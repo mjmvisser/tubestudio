@@ -259,11 +259,11 @@ export class Amp implements AmpState {
     set Rk(Rk) {
         this.setRk(Rk);
         if (this.model && this.Vg !== undefined) {
-            this.setIq(this._cathodeLoadLine.Iq());
             this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
             if (this.loadType === 'resistive') {
                 this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
            }
+           this.setIq(this._cathodeLoadLine.Iq());
         }
     }
 

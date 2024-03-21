@@ -150,7 +150,8 @@ export class CathodeLoadLine implements LoadLine {
     
     I(Vg: number): number {
         if (this.ampState.biasMethod === 'cathode') {
-            return -Vg / this.ampState.Rk;
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            return -Vg / load;
         } else {
             return this.ampState.Iq;
         }
@@ -158,7 +159,8 @@ export class CathodeLoadLine implements LoadLine {
     
     Vg(I: number): number {
         if (this.ampState.biasMethod === 'cathode') {
-            return -I * this.ampState.Rk;
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            return -I * load;
         } else {
             return this.ampState.Vq;
         }
@@ -174,7 +176,14 @@ export class CathodeLoadLine implements LoadLine {
     
     Rk() {
         if (this.ampState.model && this.ampState.Vg !== undefined) {
-            return Math.max(0, -this.ampState.Vg / this.ampState.Iq);
+            const load = Math.max(0, -this.ampState.Vg / this.ampState.Iq);
+            if (this.ampState.topology === 'se') {
+                return load;
+            } else {
+                // for push-pull topology, the current will be double
+                // R = V / I, so V / 2I = 0.5R
+                return load / 2;
+            }
         } else {
             return 0;
         }
@@ -182,7 +191,8 @@ export class CathodeLoadLine implements LoadLine {
 
     Iq() {
         if (this.ampState.model && this.ampState.Vg !== undefined) {
-            return Math.max(0, -this.ampState.Vg / this.ampState.Rk);
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            return Math.max(0, -this.ampState.Vg / load);
         } else {
             return this.ampState.Iq;
         }

@@ -77,7 +77,7 @@ export const tubeDatabase : TubeInfo[] = [
             maxVp: 700,
             maxIp: 0.400,
             minVg: -80,
-            maxVg: 0,
+            maxVg: 15,
             maxVg2: 450,
             gridStep: 5,
         },
@@ -96,4 +96,39 @@ export const tubeDatabase : TubeInfo[] = [
             },
         ]
     },
+    {
+        name: "6L6",
+        type: "pentode",
+        datasheet: "https://frank.pocnet.net/sheets/049/6/6L6.pdf",
+        defaults: {
+            Bplus: 360,
+            Rp: 7600,
+            Iq: 0.06,
+            Vg2: 250,
+        },
+        limits: {
+            maxPp: 19,
+            maxVp: 700,
+            maxIp: 0.400,
+            minVg: -80,
+            maxVg: 15,
+            maxVg2: 450,
+            gridStep: 5,
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "ayumi",
+                source: "https://ayumi.cava.jp/audio/pctube/node47.html#SECTION00952010000000000000",
+                G: 0.00219489,
+                muc: 4.99994,
+                alpha: 0.6916982033712802,
+                Vgo: 0.91804059,
+                Glim: 0.0027828,
+                Xg: 0.79545,
+                r: 0.057828332,
+                Ea: -2180,
+            }
+        ]
+    }
 ];
