@@ -57,12 +57,12 @@ class DCResistiveLoadLine extends DCLoadLine {
 class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     I(V: number) {
         const R = this.ampState.Rp + this.ampState.Rk;
-        return (this.ampState.Bplus - V) / R + this.ampState.Iq;
+        return (this.ampState.Vq - V) / R + this.ampState.Iq;
     }
     
     V(I: number) {
         const R = this.ampState.Rp + this.ampState.Rk;
-        return this.ampState.Bplus + R * (this.ampState.Iq - I);
+        return this.ampState.Vq + R * (this.ampState.Iq - I);
     }
     
     Iq() {
@@ -70,8 +70,7 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     }
 
     Vq() {
-        // a reactive load always has Bplus as Vq
-        return this.ampState.Bplus;
+        return this.ampState.Vq;
     }
 
     getLine() : Point[] {
@@ -98,7 +97,7 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
     }
 
     private get Vlim() {
-        return this.ampState.Bplus - this.ampState.Iq * this.Rpa;
+        return this.ampState.Vq - this.ampState.Iq * this.Rpa;
     }
 
     private get Ilim() {
@@ -108,20 +107,20 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
     I(V: number): number {
         if (V <= this.Vlim) {
             // class B operation
-            return (this.ampState.Bplus - V) / this.Rpb;
+            return (this.ampState.Vq - V) / this.Rpb;
         } else {
             // class A operation
-            return (this.ampState.Bplus - V) / this.Rpa + this.ampState.Iq;
+            return (this.ampState.Vq - V) / this.Rpa + this.ampState.Iq;
         }
     }
     
     V(I: number): number {
         if (I >= this.Ilim) {
             // class B operation
-            return this.ampState.Bplus - this.Rpb * I;
+            return this.ampState.Vq - this.Rpb * I;
         } else {
             // class A operation
-            return this.ampState.Bplus - this.Rpa * (I - this.ampState.Iq);
+            return this.ampState.Vq - this.Rpa * (I - this.ampState.Iq);
         }
     }
     
@@ -131,7 +130,7 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
 
     Vq() {
         // a reactive load always has Bplus as Vq
-        return this.ampState.Bplus;
+        return this.ampState.Vq;
     }
 
     getLine(): Point[] {

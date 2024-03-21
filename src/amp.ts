@@ -149,7 +149,17 @@ export class Amp implements AmpState {
         }
     }
 
-    get Vq() { return this.loadType === 'resistive' ? this._Vq : this._Bplus; }
+    get Vq() { 
+        if (this.loadType === 'resistive') {
+            return this._Vq;
+        } else {
+            if (this.biasMethod === 'cathode' && this._Vg !== undefined) {
+                return this._Bplus + this._Vg;
+            } else {
+                return this._Bplus;
+            }
+        }
+    }
     set Vq(Vq) {
         this.setVq(Vq);
         this.setIq(this._dcLoadLine.Iq());
@@ -167,6 +177,9 @@ export class Amp implements AmpState {
         this.setVq(this._dcLoadLine.Vq());
         if (this.model) {
             this.setVg(this.model.Vg(this.Vq, this.Iq));
+            if (this.biasMethod === 'cathode') {
+                this.setRk(this._cathodeLoadLine.Rk());
+            }
         }
     }
     
@@ -349,16 +362,16 @@ export class Amp implements AmpState {
 
             let data = [];
             let loadLineData = loadLine.getLine();
-            data.push({x: minVp, y: loadLine.I(minVp)});
+            data.push({x: minVp, y: loadLine.I(minVp), Vg: maxVg});
 
             // if the loadline has a bend, make sure we take it into account
             loadLineData.forEach(point => {
                 if (point.x > minVp && point.x < maxVp) {
-                    data.push(point);
+                    data.push({x: point.x, y: point.y, Vg: this.model!.Vg(point.x, point.y)});
                 }
             });
 
-            data.push({x: maxVp, y: loadLine.I(maxVp)});
+            data.push({x: maxVp, y: loadLine.I(maxVp), Vg: minVg});
 
             return data;
         } else {
