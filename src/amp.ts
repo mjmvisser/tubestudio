@@ -284,6 +284,11 @@ export class Amp implements AmpState {
         }
     }
 
+    outputPeakToPeakRMS() : number {
+        const sineWave = this.graphAmplifiedSineWave();
+        return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + value.y*value.y), 0)/sineWave.length);
+    }
+
     graphDCLoadLine() : Point[] {
         return this._dcLoadLine.getLine();
     }

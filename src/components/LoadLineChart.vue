@@ -372,7 +372,7 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
                     pointStyle: false,
                     borderColor: '#000000',
                     backgroundColor: '#000000',
-                    borderWidth: 1.5,
+                    borderWidth: 1,
                     fill: false,
                     data: amp.graphAmplifiedSineWave()
                 },
@@ -381,7 +381,7 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
                     pointStyle: false,
                     borderColor: '#8080FF',
                     backgroundColor: '#8080FF',
-                    borderWidth: 1.5,
+                    borderWidth: 1,
                     borderDash: [10, 10],
                     fill: false,
                     data: [{x: 0, y: 0}, {x: 2*Math.PI, y: 0}]
@@ -396,28 +396,68 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
 });
 
 const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
-    return {
-        animation: false,
-        responsive: false,
-        plugins: {
-            legend: {
-                display: false
+    tubeParams.value;
+
+    // need this so Vue "knows" chartOptions depends on these values
+    amp?.topology;
+    amp?.mode;
+    amp?.Bplus;
+    amp?.Iq;
+    amp?.Vq;
+    amp?.Vg;
+    amp?.Vg2;
+    amp?.biasMethod;
+    amp?.loadType;
+    amp?.Rp;
+    amp?.Rk;
+    amp?.cathodeBypass;
+    amp?.Znext;
+    amp?.ultralinearTap;
+    amp?.inputHeadroom;
+    amp?.model;
+
+    if (amp) {
+        const [min, max] = amp.outputHeadroom();
+        return {
+            animation: false,
+            responsive: false,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                },
+                title: {
+                    display: true,
+                    text: amp.outputPeakToPeakRMS().toFixed(1) + ' V rms'
+                }
             },
-            tooltip: {
-                enabled: false
+            scales: {
+                x: {
+                    display: false,
+                    min: 0,
+                    max: 2*Math.PI,
+                },
+                y: {
+                    min: min,
+                    max: max,
+                    ticks: {
+                        callback: (value: number | string, index: number, ticks: Tick[]) => {
+                            if (value == min || value == max) {
+                                return (value as number).toFixed(1) + ' V';
+                            } else {
+                                return null;
+                            }
+                        },
+                    }
+                }    
             }
-        },
-        scales: {
-            x: {
-                display: false,
-                min: 0,
-                max: 2*Math.PI,
-            },
-            y: {
-                display: false
-            }    
-        }
-    };
+        };
+    } else {
+        return {};
+    }
 });
 
 </script>
@@ -648,7 +688,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
             <div v-if="amp.model" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The maximum amplitude of the input signal'">
-                        Input Headroom (±V)
+                        Peak Input Headroom (V)
                     </label>
                 </div>
                 <div class="col-3 py-2">
@@ -657,12 +697,11 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
                 <div v-if="amp.inputHeadroom" class="col-3 py-2">
                     <label v-tooltip="'The voltage swing of the output signal'">
-                        Output Headroom (±V)
+                        Output Headroom (V)
                     </label>
                 </div>
                 <div v-if="amp.inputHeadroom" class="col-3 py-2">
-                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData" class="w-8rem h-6rem" />
-                    {{  amp.outputHeadroom()[0].toFixed() }} / {{  amp.outputHeadroom()[1].toFixed() }}, {{ (amp.outputHeadroom()[1] - amp.outputHeadroom()[0]).toFixed() }} peak-to-peak
+                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData"  />
                 </div>
             </div>
 
