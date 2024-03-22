@@ -648,7 +648,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </template>
             </div>
 
-            <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')" class="grid col-12 align-items-center">
+            <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The voltage at the screen or suppressor grid'">
                         Screen Voltage (V)
@@ -669,7 +669,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
             </div>
 
-            <div v-if="amp.model" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
+            <div v-if="amp.model" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The maximum amplitude of the input signal'">
                         Peak Input Headroom (V)
@@ -689,7 +689,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
             </div>
 
-            <div v-if="amp.model" class="grid col-12 align-items-center">
+            <div v-if="amp.model && amp.topology === 'se'" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The input impedance of the following amplifier stage'">
                         Next Stage Impedance (Ω)
