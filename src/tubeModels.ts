@@ -167,7 +167,9 @@ class AyumiTriode extends Triode {
         // Grid current // B.29
         let Ig = 0;
         if (Vgg > 0) {
-            Ig = this.params.Xg * this.params.Glim * Math.pow(Vg, 1.5) * (1.2 * (Vg / (Vp + Vg)) + 0.4);
+            if (Vg > 0) {
+                Ig = this.params.Xg * this.params.Glim * Math.pow(Vg, 1.5) * (1.2 * (Vg / (Vp + Vg)) + 0.4);
+            }
         }
 
         const Iplim = (1 - this.params.Xg) * this.params.Glim * Math.pow(Vp, 1.5);  // B.30

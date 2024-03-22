@@ -161,6 +161,7 @@ export class Amp implements AmpState {
         }
     }
     set Vq(Vq) {
+        console.log('set Vq');
         this.setVq(Vq);
         this.setIq(this._dcLoadLine.Iq());
         if (this.model) {
@@ -173,6 +174,7 @@ export class Amp implements AmpState {
 
     get Iq() { return this._Iq; }
     set Iq(Iq) {
+        console.log('set Iq');
         this.setIq(Iq);
         this.setVq(this._dcLoadLine.Vq());
         if (this.model) {
@@ -185,6 +187,7 @@ export class Amp implements AmpState {
     
     get Vg() { return this._Vg; }
     set Vg(Vg) {
+        console.log('set Vg');
         if (Vg !== undefined) {
             this.setVg(Vg);
             if (this.model && this.Vg !== undefined) {
@@ -192,7 +195,7 @@ export class Amp implements AmpState {
                 if (this.loadType === 'resistive') {
                     this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
                 }
-                this.setIq(this.model.Ip(this.Vg, this.Vq)); 
+                this.setIq(this._dcLoadLine.I(this.Vq));
                 this.setRk(this._cathodeLoadLine.Rk());
             }
         }
@@ -257,6 +260,7 @@ export class Amp implements AmpState {
 
     get Rk() { return this.biasMethod === 'cathode' ? this._Rk : 0; }
     set Rk(Rk) {
+        console.log('set Rk');
         this.setRk(Rk);
         if (this.model && this.Vg !== undefined) {
             this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
@@ -383,11 +387,11 @@ export class Amp implements AmpState {
         // simulate amplification of a sine wave
         if (this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            return simplify(range(0, 2*Math.PI, 2*Math.PI/360).map(t => {
+            return range(0, 2*Math.PI, 2*Math.PI/360).map(t => {
                 const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
                 const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine);
                 return {x: t, y: Vp - this.Vq};
-            }), 0.001, true);
+            });
         } else {
             return [];
         }

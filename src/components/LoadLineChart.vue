@@ -419,7 +419,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
     if (amp) {
         const [min, max] = amp.outputHeadroom();
         return {
-            animation: false,
+//            animation: false,
             responsive: false,
             maintainAspectRatio: false,
             plugins: {
@@ -648,44 +648,28 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </template>
             </div>
 
-            <div v-if="amp.model" class="grid surface-ground col-12 align-items-center border-y-1 border-400">
-                <div class="col-3 py-2">
-                    <label v-tooltip="'The input impedance of the following amplifier stage'">
-                        Next Stage Impedance (Ω)
-                    </label>
-                </div>
-                <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Znext" :min=0 :step=1000 showButtons
-                        :disabled="amp == null || amp.loadType === 'reactive'" />
-                </div>
-            </div>
-
             <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The voltage at the screen or suppressor grid'">
                         Screen Voltage (V)
                     </label>
                 </div>
-                <div class="col-9 py-2">
+                <div class="col-3 py-2">
                     <InputNumber v-model="amp.Vg2" :min=0 :max="amp.limits.maxVg2" :maxFractionDigits=0 :step=1 showButtons 
                         :disabled="amp == null || amp.mode === 'triode'"/>
                 </div>
-            </div>
-
-            <div v-if="amp.model && (amp.type === 'pentode' || amp.type === 'tetrode')"
-                class="grid surface-ground col-12 align-items-center border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The percentage of the signal which appears on the screen-grid'">
                         Ultra-linear tap (%)
                     </label>
                 </div>
-                <div class="col-9 py-2">
+                <div class="col-3 py-2">
                     <InputNumber v-model="amp.ultralinearTap" :min=10 :max=90 :step=10 showButtons
                         :disabled="amp.mode !== 'ultralinear'" />
                 </div>
             </div>
 
-            <div v-if="amp.model" class="grid col-12 align-items-center">
+            <div v-if="amp.model" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The maximum amplitude of the input signal'">
                         Peak Input Headroom (V)
@@ -704,6 +688,19 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData"  />
                 </div>
             </div>
+
+            <div v-if="amp.model" class="grid col-12 align-items-center">
+                <div class="col-3 py-2">
+                    <label v-tooltip="'The input impedance of the following amplifier stage'">
+                        Next Stage Impedance (Ω)
+                    </label>
+                </div>
+                <div class="col-3 py-2">
+                    <InputNumber v-model="amp.Znext" :min=0 :step=1000 showButtons
+                        :disabled="amp == null || amp.loadType === 'reactive'" />
+                </div>
+            </div>
+
 
         </template>
     </div>

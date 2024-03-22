@@ -257,7 +257,7 @@ export function intersectCharacteristicWithLoadLineV(model: TubeModel, Vg: numbe
     // find intersection of loadline with characteristic curve at Vg and return Vq
     return findRootWithBisection((Vq) => {
         return model.Ip(Vg, Vq) - loadLine.I(Vq);
-    }, 0, 5000, 1000, 0.0000001, 0.0000001);        
+    }, 0, 1000, 1000, 0.0000001, 0.0000001);        
 }
 
 export function intersectLoadLines(loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number {
