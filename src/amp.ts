@@ -194,8 +194,10 @@ export class Amp implements AmpState {
                 // TODO: move this into the loadline
                 if (this.loadType === 'resistive') {
                     this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+                    this.setIq(this._dcLoadLine.I(this.Vq));
+                } else {
+                    this.setIq(this.model.Ip(this.Vg, this.Vq));
                 }
-                this.setIq(this._dcLoadLine.I(this.Vq));
                 this.setRk(this._cathodeLoadLine.Rk());
             }
         }
