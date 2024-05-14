@@ -14,6 +14,7 @@ import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
 import Checkbox from 'primevue/checkbox';
+import ContextMenu from 'primevue/contextmenu';
 //import zoomPlugin from 'chartjs-plugin-zoom';
 
 
@@ -38,9 +39,9 @@ const models = computed(() => {
     }
 });
 
-const selectedTube : Ref<number | null> = ref(null);
-const tubeParams : Ref<TubeInfo | null> = ref(null);
-const selectedModel : Ref<number | null> = ref(null);
+const selectedTube = ref<number | null>(null);
+const tubeParams = ref<TubeInfo | null>(null);
+const selectedModel = ref<number | null>(null);
 
 //const Iq_ma : Ref<number | null> = ref(null);
 
@@ -61,7 +62,8 @@ const selectedModel : Ref<number | null> = ref(null);
 //     inputHeadroom: 0.0001
 // });
 
-let amp : UnwrapNestedRefs<Amp> | null = null;
+//let amp : UnwrapNestedRefs<Amp> | null = null;
+let amp = ref<Amp | null>(null);
 
 watch(selectedTube, (index) => {
     if (index !== null) {
@@ -70,15 +72,19 @@ watch(selectedTube, (index) => {
         // clear the model
         selectedModel.value = null;
 
+        // hide the cathode load line by default
+        showCathodeLoadLine.value = false;
+
         // create amp with defaults
-        amp = reactive(new Amp(tubeParams.value.name, tubeParams.value.type, tubeParams.value.defaults, tubeParams.value.limits));
-        Iq_ma.value = amp.Iq * 1000;
+        amp.value = new Amp(tubeParams.value.name, tubeParams.value.type, tubeParams.value.defaults, tubeParams.value.limits);
+        amp.value.init();
+        Iq_ma.value = amp.value.Iq * 1000;
     }
 });
 
 watch(selectedModel, (index) => {
-    if (amp && index !== null && tubeParams.value !== null) {
-        amp.model = tubeFactory.createTube(tubeParams.value.type, amp, tubeParams.value.models[index]);
+    if (amp.value && index !== null && tubeParams.value !== null) {
+        amp.value.model = tubeFactory.createTube(tubeParams.value.type, amp.value, tubeParams.value.models[index]);
     }
 });
 
@@ -88,15 +94,15 @@ const Iq_ma = computed({
         selectedTube.value;
         selectedModel.value;
 
-        if (amp) {
-            return amp.Iq * 1000;
+        if (amp.value) {
+            return amp.value.Iq * 1000;
         } else {
             return null;
         }
     },
     set(newValue) {
-        if (newValue !== null && amp) {
-            amp.Iq = newValue / 1000;
+        if (newValue !== null && amp.value) {
+            amp.value.Iq = newValue / 1000;
         }
     }
 });
@@ -124,33 +130,35 @@ function proportionalStep(value: number) {
     }
 }
 
+const showCathodeLoadLine = ref(false);
+
 const characteristicChartData = computed(() : ChartData<'scatter'> => {
     let datasets : ChartDataset<'scatter'>[] = [];
 
     tubeParams.value;
 
     // need this so Vue "knows" chartData depends on these values
-    amp?.topology;
-    amp?.mode;
-    amp?.Bplus;
-    amp?.Iq;
-    amp?.Vq;
-    amp?.Vg;
-    amp?.Vg2;
-    amp?.biasMethod;
-    amp?.loadType;
-    amp?.Rp;
-    amp?.Rk;
-    amp?.cathodeBypass;
-    amp?.Znext;
-    amp?.ultralinearTap;
-    amp?.inputHeadroom;
-    amp?.model;
+    amp.value;
+    amp.value?.topology;
+    amp.value?.mode;
+    amp.value?.Bplus;
+    amp.value?.Iq;
+    amp.value?.Vq;
+    amp.value?.Vg;
+    amp.value?.Vg2;
+    amp.value?.biasMethod;
+    amp.value?.loadType;
+    amp.value?.Rp;
+    amp.value?.Rk;
+    amp.value?.cathodeBypass;
+    amp.value?.Znext;
+    amp.value?.ultralinearTap;
+    amp.value?.inputHeadroom;
+    amp.value?.model;
+    showCathodeLoadLine.value;
 
-    console.log("in chartData");
-
-    if (amp) {
-        datasets = datasets.concat(amp.graphVgVpIp().map((gridCurve: VgVpIp) => ({
+    if (amp.value) {
+        datasets = datasets.concat(amp.value.graphVgVpIp().map((gridCurve: VgVpIp) => ({
             label: 'Vg=' + gridCurve.Vg + 'V',
             showLine: true,
             pointStyle: false,
@@ -163,7 +171,7 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
         })));
 
         datasets.push({
-            label: 'Max Dissipation: ' + amp.limits.maxPp + 'W',
+            label: 'Max Dissipation: ' + amp.value.limits.maxPp + 'W',
             showLine: true,
             pointStyle: false,
             pointHitRadius: 2,
@@ -172,11 +180,11 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
             borderWidth: 1.5,
             borderDash: [10, 10],
             fill: false,
-            data: amp.graphPp(),
+            data: amp.value.graphPp(),
         });
 
         datasets.push({
-            label: amp.loadType[0].toUpperCase() + amp.loadType.slice(1) + ' DC Load: ' + amp.dcLoadLineInfo(),
+            label: amp.value.loadType[0].toUpperCase() + amp.value.loadType.slice(1) + ' DC Load: ' + amp.value.dcLoadLineInfo(),
             showLine: true,
             pointStyle: false,
             pointHitRadius: 5,
@@ -185,11 +193,11 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
             borderWidth: 1.5,
             fill: false,
             //lineTension: 0,
-            data: amp.graphDCLoadLine()
+            data: amp.value.graphDCLoadLine()
         });
 
         datasets.push({
-            label: 'AC Load: ' + amp.acLoadLineInfo(),
+            label: 'AC Load: ' + amp.value.acLoadLineInfo(),
             showLine: true,
             pointStyle: false,
             pointHitRadius: 5,
@@ -198,22 +206,24 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
             borderWidth: 2.5,
             fill: false,
             //lineTension: 0,
-            data: amp.graphACLoadLine()
+            data: amp.value.graphACLoadLine()
         });
 
-//         datasets.push({
-//             label: 'Cathode Load: ' + amp.Rk?.toFixed() + 'Ω',
-//             showLine: true,
-//             pointStyle: false,
-//             pointHitRadius: 5,
-//             borderColor: 'rgb(255,0,255)',
-//             backgroundColor: 'rgb(255,0,255)',
-//             borderWidth: 2.5,
-//             fill: false,
-// //             lineTension: 0,
-//             data: 
-//             amp.graphCathodeLoadLine(),
-//         });
+        if (showCathodeLoadLine.value) {
+            datasets.push({
+                label: 'Cathode Load: ' + (amp.value.biasMethod === 'fixed' ? 'Fixed' : amp.value.Rk?.toFixed() + 'Ω'),
+                showLine: true,
+                pointStyle: false,
+                pointHitRadius: 5,
+                borderColor: 'rgb(255,0,255)',
+                backgroundColor: 'rgb(255,0,255)',
+                borderWidth: 2.5,
+                fill: false,
+    //             lineTension: 0,
+                data: 
+                amp.value.graphCathodeLoadLine(),
+            });
+        }
 
         datasets.push({
             label: 'Operating Point',
@@ -222,12 +232,12 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
             borderColor: 'rgb(255,0,0)',
             backgroundColor: 'rgb(255,0,0)',
             fill: false,
-            data: amp.graphOperatingPoint()
+            data: amp.value.graphOperatingPoint()
         });
 
-        if (amp.Vg !== undefined) {
+        if (amp.value.Vg !== undefined) {
             datasets.push({
-                label: 'Vg=' + amp.Vg?.toFixed(1) + 'V',
+                label: 'Vg=' + amp.value.Vg?.toFixed(1) + 'V',
                 showLine: true,
                 pointStyle: false,
                 pointHitRadius: 2,
@@ -235,24 +245,24 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
                 backgroundColor: 'rgb(0,0,255)',
                 borderWidth: 1.5,
                 fill: false,
-                data: amp.graphVpIp(amp.Vg),
+                data: amp.value.graphVpIp(amp.value.Vg),
             });
         }
 
-        if (amp.Vg !== undefined && amp.inputHeadroom !== undefined) {
-            const minVg = amp.Vg - amp.inputHeadroom;
+        if (amp.value.Vg !== undefined && amp.value.inputHeadroom !== undefined) {
+            // const minVg = amp.Vg - amp.inputHeadroom;
 
-            datasets.push({
-                label: 'Vg=' + minVg?.toFixed(1) + 'V',
-                showLine: true,
-                pointStyle: false,
-                pointHitRadius: 2,
-                borderColor: 'rgb(0,255,0)',
-                backgroundColor: 'rgb(0,255,0)',
-                borderWidth: 1.5,
-                fill: false,
-                data: amp.graphVpIp(minVg)
-            });
+            // datasets.push({
+            //     label: 'Vg=' + minVg?.toFixed(1) + 'V',
+            //     showLine: true,
+            //     pointStyle: false,
+            //     pointHitRadius: 2,
+            //     borderColor: 'rgb(0,255,0)',
+            //     backgroundColor: 'rgb(0,255,0)',
+            //     borderWidth: 1.5,
+            //     fill: false,
+            //     data: amp.graphVpIp(minVg)
+            // });
 
             datasets.push({
                 label: 'Headroom',
@@ -261,22 +271,22 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
                 borderColor: 'rgb(0,255,0)',
                 backgroundColor: 'rgb(0,255,0)',
                 fill: true,
-                data: amp.graphHeadroom()
+                data: amp.value.graphHeadroom()
             });
 
-            const maxVg = amp.Vg + amp.inputHeadroom;
+            // const maxVg = amp.Vg + amp.inputHeadroom;
 
-            datasets.push({
-                label: 'Vg=' + maxVg?.toFixed(1) + 'V',
-                showLine: true,
-                pointStyle: false,
-                pointHitRadius: 2,
-                borderColor: 'rgb(0,255,0)',
-                backgroundColor: 'rgb(0,255,0)',
-                borderWidth: 1.5,
-                fill: false,
-                data: amp.graphVpIp(maxVg)
-            });
+            // datasets.push({
+            //     label: 'Vg=' + maxVg?.toFixed(1) + 'V',
+            //     showLine: true,
+            //     pointStyle: false,
+            //     pointHitRadius: 2,
+            //     borderColor: 'rgb(0,255,0)',
+            //     backgroundColor: 'rgb(0,255,0)',
+            //     borderWidth: 1.5,
+            //     fill: false,
+            //     data: amp.graphVpIp(maxVg)
+            // });
         }
     }
 
@@ -286,7 +296,7 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
 const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
     const aspectRatio = 1.75;
 
-    if (tubeParams.value && amp) {
+    if (tubeParams.value && amp.value) {
         return {
             animation: false,
             aspectRatio: aspectRatio,
@@ -294,7 +304,7 @@ const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
             plugins: {
                 title: {
                     display: true,
-                    text: amp.name + ' Average Plate Characteristics'
+                    text: amp.value.name + ' Average Plate Characteristics'
                 },
                 legend: {
                     display: false,
@@ -318,7 +328,7 @@ const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
                         stepSize: 50
                     },
                     min: 0,
-                    max: amp.limits.maxVp,
+                    max: amp.value.limits.maxVp,
                     title: { display: true, text: 'Vp (V)' }
                 },
                 y: {
@@ -327,9 +337,9 @@ const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
                             // convert from A to mA
                             return ((value as number) * 1000).toFixed(1);
                         },
-                        stepSize: amp.limits.maxIp / 10,
+                        stepSize: amp.value.limits.maxIp / 10,
                     },
-                    max: amp.limits.maxIp,
+                    max: amp.value.limits.maxIp,
                     min: 0,
                     title: { display: true, text: 'Ip (mA)' }
                 }
@@ -347,24 +357,24 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
     tubeParams.value;
 
     // need this so Vue "knows" chartData depends on these values
-    amp?.topology;
-    amp?.mode;
-    amp?.Bplus;
-    amp?.Iq;
-    amp?.Vq;
-    amp?.Vg;
-    amp?.Vg2;
-    amp?.biasMethod;
-    amp?.loadType;
-    amp?.Rp;
-    amp?.Rk;
-    amp?.cathodeBypass;
-    amp?.Znext;
-    amp?.ultralinearTap;
-    amp?.inputHeadroom;
-    amp?.model;
+    amp.value?.topology;
+    amp.value?.mode;
+    amp.value?.Bplus;
+    amp.value?.Iq;
+    amp.value?.Vq;
+    amp.value?.Vg;
+    amp.value?.Vg2;
+    amp.value?.biasMethod;
+    amp.value?.loadType;
+    amp.value?.Rp;
+    amp.value?.Rk;
+    amp.value?.cathodeBypass;
+    amp.value?.Znext;
+    amp.value?.ultralinearTap;
+    amp.value?.inputHeadroom;
+    amp.value?.model;
 
-    if (amp) {
+    if (amp.value) {
         return {
             datasets: [
                 {
@@ -374,7 +384,7 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
                     backgroundColor: '#000000',
                     borderWidth: 1,
                     fill: false,
-                    data: amp.graphAmplifiedSineWave()
+                    data: amp.value.graphAmplifiedSineWave()
                 },
                 {
                     showLine: true,
@@ -399,25 +409,25 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
     tubeParams.value;
 
     // need this so Vue "knows" chartOptions depends on these values
-    amp?.topology;
-    amp?.mode;
-    amp?.Bplus;
-    amp?.Iq;
-    amp?.Vq;
-    amp?.Vg;
-    amp?.Vg2;
-    amp?.biasMethod;
-    amp?.loadType;
-    amp?.Rp;
-    amp?.Rk;
-    amp?.cathodeBypass;
-    amp?.Znext;
-    amp?.ultralinearTap;
-    amp?.inputHeadroom;
-    amp?.model;
+    amp.value?.topology;
+    amp.value?.mode;
+    amp.value?.Bplus;
+    amp.value?.Iq;
+    amp.value?.Vq;
+    amp.value?.Vg;
+    amp.value?.Vg2;
+    amp.value?.biasMethod;
+    amp.value?.loadType;
+    amp.value?.Rp;
+    amp.value?.Rk;
+    amp.value?.cathodeBypass;
+    amp.value?.Znext;
+    amp.value?.ultralinearTap;
+    amp.value?.inputHeadroom;
+    amp.value?.model;
 
-    if (amp) {
-        const [min, max] = amp.outputHeadroom();
+    if (amp.value) {
+        const [min, max] = amp.value.outputHeadroom();
         return {
 //            animation: false,
             responsive: false,
@@ -431,7 +441,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 },
                 title: {
                     display: true,
-                    text: amp.outputPeakToPeakRMS().toFixed(1) + ' V rms'
+                    text: amp.value.outputPeakToPeakRMS().toFixed(1) + ' V rms'
                 }
             },
             scales: {
@@ -460,11 +470,28 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
     }
 });
 
+const showOrHide = (shown : boolean) => {
+    if (shown) {
+        return 'Hide';
+    } else {
+        return 'Show';
+    }
+}
+
+const contextMenuItems = computed(() => [
+    {
+        label: `${showOrHide(showCathodeLoadLine.value)} Cathode Load Line`,
+        command: () => { showCathodeLoadLine.value = !showCathodeLoadLine.value; },
+        disabled: () => { return selectedTube.value === null || selectedModel.value === null }
+    }
+]);
+
 </script>
 
 <template>
     <div class="pl-4 col-12 chart-container">
         <Scatter id="tube-chart" :options="characteristicChartOptions" :data="characteristicChartData" />
+        <ContextMenu :global="true" :model="contextMenuItems" />
     </div>
     <div class="pl-4 grid align-items-center">
         <div class="grid col-12 align-items-center">
@@ -485,10 +512,17 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                         placeholder="Select a Model" class="w-full md:w-14rem"/>
                 </div>
             </div>
-            <div class="col-4 py-2">
+            <div class="col-2 py-2">
                 <div class="text-left">
                     <template v-if="selectedTube !== null && selectedModel !== null">
                         <a :href="tubeDatabase[selectedTube].models[selectedModel].source">Source</a>
+                    </template>
+                </div>
+            </div>
+            <div class="col-2 py-2">
+                <div class="text-left">
+                    <template v-if="selectedTube !== null && selectedModel !== null">
+                        <a :href="tubeDatabase[selectedTube].datasheet">Datasheet</a>
                     </template>
                 </div>
             </div>
@@ -504,11 +538,11 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     </div>
                     <div class="col-3 py-2">
                         <div class="flex align-items-center">
-                            <RadioButton v-model="amp.topology" inputId="single-ended" name="topology" value="se" :disabled="amp == null || amp.loadType !== 'reactive'" />
+                            <RadioButton v-model="amp.topology" inputId="single-ended" name="topology" value="se" :disabled="amp == null" />
                             <label for="single-ended" class="ml-2">Single-Ended</label>
                         </div>
                         <div class="flex align-items-center">
-                            <RadioButton v-model="amp.topology" inputId="push-pull" name="topology" value="pp" :disabled="amp == null || amp.loadType !== 'reactive'" />
+                            <RadioButton v-model="amp.topology" inputId="push-pull" name="topology" value="pp" :disabled="amp == null" />
                             <label for="push-pull" class="ml-2">Push-Pull</label>
                         </div>
                     </div>
@@ -679,17 +713,17 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     <InputNumber v-model="amp.inputHeadroom" :maxFractionDigits=4 :min=0 :step=0.01 showButtons
                         :disabled="amp == null" />
                 </div>
-                <div v-if="amp.inputHeadroom" class="col-3 py-2">
+                <div v-if="amp.inputHeadroom" class="col-2 py-2">
                     <label v-tooltip="'The voltage swing of the output signal'">
                         Output Headroom (V)
                     </label>
                 </div>
-                <div v-if="amp.inputHeadroom" class="col-3 py-2">
+                <div v-if="amp.inputHeadroom" class="col-4 py-2">
                     <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData"  />
                 </div>
             </div>
 
-            <div v-if="amp.model && amp.topology === 'se'" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
+            <div v-if="amp.model && amp.loadType === 'resistive'" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The input impedance of the following amplifier stage'">
                         Next Stage Impedance (Ω)
@@ -697,7 +731,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 </div>
                 <div class="col-3 py-2">
                     <InputNumber v-model="amp.Znext" :min=0 :step=1000 showButtons
-                        :disabled="amp == null || amp.loadType === 'reactive'" />
+                        :disabled="amp == null" />
                 </div>
             </div>
 
