@@ -234,6 +234,7 @@ class KorenNizhegorodovPentode extends Pentode {
     }         
 }
 
+// to extract Ayumi parameters from SPICE model, see https://ayumi.cava.jp/audio/pctube/node47.html 
 
 interface AyumiTriodeParams {
     type: 'ayumi',
