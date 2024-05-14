@@ -130,7 +130,11 @@ export class Amp implements AmpState {
 
     private recalculateVg() {
         if (this.model) {
-            this.setVg(this.model.Vg(this.Vq, this.Iq));
+            if (this.biasMethod === 'cathode') {
+                this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
+            } else {
+                this.setVg(this.model.Vg(this.Vq, this.Iq));
+            }
         }
     }
 
@@ -522,7 +526,7 @@ export class Amp implements AmpState {
         // simulate amplification of a sine wave
         if (this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            return range(0, 2*Math.PI, 2*Math.PI/360).map(t => {
+            return range(0, 2*Math.PI, 2*Math.PI/45).map(t => {
                 const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
                 const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine) - this.Vq;
                 if (this.topology === 'pp') {
