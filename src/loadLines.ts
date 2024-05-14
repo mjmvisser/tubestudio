@@ -23,15 +23,15 @@ export abstract class DCLoadLine implements LoadLine {
     abstract info(): string;
 }
 
-class DCResistiveLoadLine extends DCLoadLine {
+abstract class DCResistiveLoadLine extends DCLoadLine {
+    abstract R() : number;
+
     I(V: number) {
-        const R = this.ampState.Rp + this.ampState.Rk;
-        return (this.ampState.Bplus - V) / R;
+        return (this.ampState.Bplus - V) / this.R();
     }
 
     V(I: number) {
-        const R = this.ampState.Rp + this.ampState.Rk;
-        return this.ampState.Bplus - I * R;
+        return this.ampState.Bplus - I * this.R();
     }
 
     Iq() {
@@ -49,19 +49,31 @@ class DCResistiveLoadLine extends DCLoadLine {
     }
 
     info() : string {
-        const R = this.ampState.Rp + this.ampState.Rk;
-        return R.toFixed() + 'Ω';
+        return this.R().toFixed() + 'Ω';
+    }
+}
+
+class DCSingleEndedResistiveLoadLine extends DCResistiveLoadLine {
+    R() {
+        return this.ampState.Rp + (this.ampState.Rk ?? 0);
+    }
+}
+
+class DCPushPullResistiveLoadLine extends DCResistiveLoadLine {
+    R() {
+        // each tube sees half the load
+        return (this.ampState.Rp + (this.ampState.Rk ?? 0)) / 2;
     }
 }
 
 class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     I(V: number) {
-        const R = this.ampState.Rp + this.ampState.Rk;
+        const R = this.ampState.Rp + (this.ampState.Rk ?? 0);
         return (this.ampState.Vq - V) / R + this.ampState.Iq;
     }
     
     V(I: number) {
-        const R = this.ampState.Rp + this.ampState.Rk;
+        const R = this.ampState.Rp + (this.ampState.Rk ?? 0);
         return this.ampState.Vq + R * (this.ampState.Iq - I);
     }
     
@@ -80,47 +92,47 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     }
 
     info() : string {
-        const R = this.ampState.Rp + this.ampState.Rk;
+        const R = this.ampState.Rp + (this.ampState.Rk ?? 0);
         return R.toFixed() + 'Ω';
     }
 }
 
 class DCPushPullReactiveLoadLine extends DCLoadLine {
-    private get Rpa() {
-        const R = this.ampState.Rp + this.ampState.Rk;
+    private Rpa() {
+        const R = this.ampState.Rp + (this.ampState.Rk ?? 0);
         return R/2;
     }
 
-    private get Rpb() {
-        const R = this.ampState.Rp + this.ampState.Rk;
+    private Rpb() {
+        const R = this.ampState.Rp + (this.ampState.Rk ?? 0);
         return R/4;
     }
 
-    private get Vlim() {
-        return this.ampState.Vq - this.ampState.Iq * this.Rpa;
+    private Vlim() {
+        return this.ampState.Vq - this.ampState.Iq * this.Rpa();
     }
 
-    private get Ilim() {
+    private Ilim() {
         return 2 * this.ampState.Iq;
     }
 
     I(V: number): number {
-        if (V <= this.Vlim) {
+        if (V <= this.Vlim()) {
             // class B operation
-            return (this.ampState.Vq - V) / this.Rpb;
+            return (this.ampState.Vq - V) / this.Rpb();
         } else {
             // class A operation
-            return (this.ampState.Vq - V) / this.Rpa + this.ampState.Iq;
+            return (this.ampState.Vq - V) / this.Rpa() + this.ampState.Iq;
         }
     }
     
     V(I: number): number {
-        if (I >= this.Ilim) {
+        if (I >= this.Ilim()) {
             // class B operation
-            return this.ampState.Vq - this.Rpb * I;
+            return this.ampState.Vq - this.Rpb() * I;
         } else {
             // class A operation
-            return this.ampState.Vq - this.Rpa * (I - this.ampState.Iq);
+            return this.ampState.Vq - this.Rpa() * (I - this.ampState.Iq);
         }
     }
     
@@ -135,13 +147,13 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
 
     getLine(): Point[] {
         const p1 = {x: 0, y: this.I(0)};
-        const p2 = {x: this.Vlim, y: this.Ilim};
+        const p2 = {x: this.Vlim(), y: this.Ilim()};
         const p3 = {x: this.V(0), y: 0};
         return [p1, p2, p3];
     }
 
     info() : string {
-        return this.Rpb.toFixed()  + 'Ω (Class B) / ' + this.Rpa.toFixed() + 'Ω (Class A)';
+        return this.Rpb().toFixed()  + 'Ω (Class B) / ' + this.Rpa().toFixed() + 'Ω (Class A)';
     }
 }
 
@@ -150,7 +162,7 @@ export class CathodeLoadLine implements LoadLine {
     
     I(Vg: number): number {
         if (this.ampState.biasMethod === 'cathode') {
-            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk! : this.ampState.Rk! * 2;
             return -Vg / load;
         } else {
             return this.ampState.Iq;
@@ -159,7 +171,7 @@ export class CathodeLoadLine implements LoadLine {
     
     Vg(I: number): number {
         if (this.ampState.biasMethod === 'cathode') {
-            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk! : this.ampState.Rk! * 2;
             return -I * load;
         } else {
             return this.ampState.Vq;
@@ -191,7 +203,7 @@ export class CathodeLoadLine implements LoadLine {
 
     Iq() {
         if (this.ampState.model && this.ampState.Vg !== undefined) {
-            const load = this.ampState.topology === 'se' ? this.ampState.Rk : this.ampState.Rk * 2;
+            const load = this.ampState.topology === 'se' ? this.ampState.Rk! : this.ampState.Rk! * 2;
             return Math.max(0, -this.ampState.Vg / load);
         } else {
             return this.ampState.Iq;
@@ -224,7 +236,7 @@ export class ACLoadLine implements LoadLine {
     }
     
     get Z() {
-        const R = this.ampState.Rp + (this.ampState.cathodeBypass ? 0 : this.ampState.Rk);
+        const R = this.ampState.Rp + (this.ampState.cathodeBypass ? 0 : (this.ampState.Rk ?? 0));
         return (R * this.ampState.Znext!) / (R + this.ampState.Znext!);
     }
 
@@ -248,7 +260,11 @@ export const loadLineFactory = {
                 return new DCSingleEndedReactiveLoadLine(ampState);
             }
         } else { // if (loadType === "resistive")
-            return new DCResistiveLoadLine(ampState);
+            if (topology === 'pp') {
+                return new DCPushPullResistiveLoadLine(ampState);            
+            } else { // if (topology === 'se')
+                return new DCSingleEndedResistiveLoadLine(ampState);            
+            }
         }
     },
 }
