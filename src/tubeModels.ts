@@ -10,7 +10,7 @@ export abstract class TubeModel {
     Vg(Vp: number, Ip: number): number {
         return findRootWithBisection((Vg) => {
             return this.Ip(Vg, Vp) - Ip;
-        }, -500, 0, 1000, 0.0000001, 0.0000001);
+        }, -500, 50, 1000, 0.0000001, 0.0000001);
     }
     
     Vp(Vg: number, Ip: number): number {
@@ -97,6 +97,144 @@ class KorenPentode extends Pentode {
     }
 }
 
+interface KorenNizhegorodovPentodeParams {
+    type: 'koren-nizhegorodov'; // PaintKIP model
+    // Triode parameters
+    MU: number;
+    KG1: number;
+    KP: number;
+    KVB: number;
+    VCT: number;
+    EX: number;
+
+    RGI?: number; // for grid current when grid is positive
+
+    // Pentode/tetrode parameters
+    KG2: number;
+    KLAM: number;  // sets a slight linear slope of the top of the curves - set to zero if unused
+    KLAMG: number;  // simple grid-dependent linear slope of the top of the curves - set to zero if unused
+    KNEE: number;   // pentode knee parameter - KVB in the original Koren Improved Model
+    KVC: number;    // controls to what degree the knee bend of the plate lines is mirrored by the screen lines
+
+    // Tanh knee is sharper and better for beam tetrodes
+    // atan still defines the top but is shifted
+    tanhKnee?: {
+        KNEE2: number;  // controls curving on the top of the knee
+        KNEX: number;   // by how many volts the knee controlled by parameter KNEE is shifted to the left
+    }
+
+    advSigmoid?: {
+        KD: number;
+        KC: number;
+        KR1: number;
+        KR2: number;
+
+        KVBG: number;
+        KB1: number;
+        KB2: number;
+        KB3: number;
+        KB4: number;
+        KVBGI: number;
+    };
+
+    addKink?: {
+        KNK: number;
+        KNG: number;
+        KNPL: number;
+        KNSL: number;
+        KNPR: number;
+        KNSR: number;
+    }
+}
+
+function limit(x: number, min: number, max: number) {
+    if (x < min) {
+        return min;
+    } else if (x > max) {
+        return max;
+    } else {
+        return x;
+    }
+}
+
+function pwr(arg: number, pow: number) {
+    return Math.pow(Math.abs(arg), pow);
+}
+
+function pwr_pwrs(arg: number, pow: number) {
+    if (arg >= 0) return 2 * Math.pow(arg, pow);
+    else // this really is a 0
+    return 0.0; // Math.pow(arg, pow) - Math.pow(-arg, pow);
+  }
+
+class KorenNizhegorodovPentode extends Pentode {
+    constructor(ampState: PentodeAmpState, private params: KorenNizhegorodovPentodeParams) {
+        super(ampState);
+    }
+
+    private plateCurrentTriode(Vp: number, Vg: number, kg: number) {
+        const adj_e = this.params.KP * (1/this.params.MU + (this.params.VCT + Vg)/Math.sqrt(this.params.KVB + Vp*Vp));
+        const E1 = (adj_e > 700) ? Vp/this.params.KP*adj_e : Vp/this.params.KP*Math.log(1+Math.exp(adj_e));// avoid overflow preserving precision
+        
+        const Iplate = pwr_pwrs(E1,this.params.EX)/kg;
+        return Iplate;
+    }
+
+    // see https://en.wikipedia.org/wiki/Sigmoid_function
+    // https://en.wikipedia.org/wiki/Error_function
+    // https://www.desmos.com/calculator/rxyjk5jjvo
+    knee_func_erf(x: number) {
+        if (this.params.advSigmoid) {
+            const xb1 = pwr(x, this.params.advSigmoid.KB1);
+            const xb2 = pwr(x, this.params.advSigmoid.KB2);
+            const xb3 = pwr(x, this.params.advSigmoid.KB3);
+            const power = -xb1*(this.params.advSigmoid.KC+this.params.advSigmoid.KR1*xb2)/(this.params.advSigmoid.KD+this.params.advSigmoid.KR2*xb3);
+            return 1.5708*pwr((1-Math.exp(power)),this.params.advSigmoid.KB4);
+        } else {
+            return 0;
+        }
+    }
+
+    knee_simple(Vp: number) { 
+        return this.params.tanhKnee 
+          ? (Math.atan((Vp+this.params.tanhKnee.KNEX)/this.params.KNEE)*Math.tanh(Vp/this.params.tanhKnee.KNEE2))
+          : Math.atan(Vp/this.params.KNEE); 
+      }
+      
+    top_adjustments(Vp: number, Vg: number) {
+        if (this.params.addKink) {
+            // to do: improve this by relacing LIMIT with the approach from 
+            // https://www.desmos.com/calculator/64of4ge5ym
+            const magnitude = limit(this.params.addKink.KNK-Vg*this.params.addKink.KNG,0,0.3);
+            let dent_eq = // see https://www.desmos.com/calculator/64of4ge5ym
+            -Math.atan((Vp-this.params.addKink.KNPL)/this.params.addKink.KNSL)  // left side of 'trough' aka kink aka dip
+            +Math.atan((Vp-this.params.addKink.KNPR)/this.params.addKink.KNSR); // right side of 'trough' aka kink aka dip
+            dent_eq *= magnitude;
+            dent_eq += 1;
+            return dent_eq;
+        } else {
+            return 1;
+        }
+    }
+      
+    Ip(Vg: number, Vp: number) {
+//        if (addLocalNFB) Eg += Ep*NFB; // apply local NFB
+            // if (currentTabIdx == 2 && doLIN && Eg_last != Eg) 
+            //   plateCurrent_li_adjust(Ep, Eg);
+          
+        const v_screen = this.ampState.mode === 'ultralinear' ? (this.ampState.Vq + this.ampState.ultralinearTap * (Vp - this.ampState.Vq)) : this.ampState.Vg2;
+        const triode_ip = this.plateCurrentTriode(v_screen, Vg, this.params.KG1);
+        return (this.params.advSigmoid
+                    ? (triode_ip * this.knee_func_erf(Vp/(
+                                                      this.params.KNEE*(this.params.advSigmoid.KVBGI+triode_ip*this.params.KG1*this.params.advSigmoid.KVBG)
+                                                      )
+                                                  ))
+                    : triode_ip * this.knee_simple(Vp))
+              * this.top_adjustments(Vp, Vg) * (1 + this.params.KLAMG*Vp)  + this.params.KLAM*Vp;
+    }         
+}
+
+
 interface AyumiTriodeParams {
     type: 'ayumi',
     G: number;
@@ -135,11 +273,7 @@ class AyumiTriode extends Triode {
         this.mum = this.a / 1.5 * params.muc  // B.6
 
         this.params = {
-            type: 'ayumi',
-            G: params.G,
-            muc: params.muc,
-            alpha: params.alpha,
-            Vgo: params.Vgo,
+            ...params,
             Glim: (params.Glim === undefined) ? this.Gp * Math.pow(1 + 1/this.mum, 1.5) : params.Glim, // B.21
             Xg: (params.Xg === undefined) ? 0.5 / Math.pow(1 + 1/this.mum, 1.5) : params.Xg,           // B.20
         };
@@ -286,7 +420,7 @@ class AyumiPentode extends Pentode {
     }
 }
 
-export type TubeModelParams = (AyumiTriodeParams | AyumiPentodeParams | KorenTriodeParams | KorenPentodeParams) & {type: string; attribution: string; source: string};
+export type TubeModelParams = (AyumiTriodeParams | AyumiPentodeParams | KorenTriodeParams | KorenPentodeParams | KorenNizhegorodovPentodeParams) & {type: string; attribution: string; source: string};
 
 export const tubeFactory = {
     createTube: (type: 'triode' | 'tetrode' | 'pentode', ampState: AmpState, params: TubeModelParams) => {
@@ -305,6 +439,8 @@ export const tubeFactory = {
                 switch (params.type) {
                     case 'koren':
                         return new KorenPentode(ampState as PentodeAmpState, params as KorenPentodeParams);
+                    case 'koren-nizhegorodov':
+                        return new KorenNizhegorodovPentode(ampState as PentodeAmpState, params as KorenNizhegorodovPentodeParams);
                     case 'ayumi':
                         return new AyumiPentode(ampState as PentodeAmpState, params as AyumiPentodeParams);
                 }

@@ -22,7 +22,7 @@ export const tubeDatabase : TubeInfo[] = [
         },
         limits: {
             maxPp: 1.2,
-            maxVp: 500,
+            maxVp: 700,
             maxIp: 0.005,
             minVg: -6,
             maxVg: 0,
@@ -130,5 +130,142 @@ export const tubeDatabase : TubeInfo[] = [
                 Ea: -2180,
             }
         ]
+    },
+    {
+        name: "EF80",
+        type: "pentode",
+        datasheet: "https://frank.pocnet.net/sheets/010/e/EF80.pdf",
+        defaults: {
+            Bplus: 300,
+            Rp: 22500,
+            Iq: 0.0082,
+            Vg2: 200,
+        },
+        limits: {
+            maxPp: 3.8,
+            maxVp: 400,
+            maxIp: 0.05,
+            minVg: -4,
+            maxVg: 0,
+            maxVg2: 400,
+            gridStep: 1,
+        },
+        models: [
+            {
+                type: "koren-nizhegorodov",
+                attribution: "koonw",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-166",
+                MU: 51.5,
+                KG1: 737.47,
+                KP: 186.79,
+                KVB: 1085.66,
+                VCT: 0.2779,
+                EX: 1.558, 
+                KG2: 724.57,
+                KLAM: 0,
+                KLAMG: 1.102E-4,
+                KNEE: 963.53,
+                KVC: 1.795,
+                advSigmoid: {
+                    KD: 118.44,
+                    KC: 571.64,
+                    KR1: 0.00625,
+                    KR2: 0.1745,
+                    KVBG: 0.008104,
+                    KB1: 0.908,
+                    KB2: 0.01702,
+                    KB3: 0.00625,
+                    KB4: 3.442,
+                    KVBGI: 0.04391,
+                },
+                addKink: {
+                    KNK: 0.05906,
+                    KNG: 1.122E-4,
+                    KNPL: 0.3353,
+                    KNSL: 0.07806,
+                    KNPR: 621.29,
+                    KNSR: 5.842E6,
+                }
+
+/*
+.SUBCKT EF80 P G2 G K ; LTSpice tetrode.asy pinout
+* .SUBCKT EF80 P G K G2 ; Koren Pentode Pspice pinout
++ PARAMS: MU=51.5 KG1=737.47 KP=186.79 KVB=1085.66 VCT=0.2779 EX=1.558 KG2=724.57 KNEE=963.53 KVC=1.795
++ KLAMG=1.102E-4  KD=118.44 KC=571.64 KR1=0.00625 KR2=0.1745 KVBG=0.008104 KB1=0.908 KB2=0.01702 KB3=0.00625 KB4=3.442 KVBGI=0.04391 KNK=0.05906 KNG=1.122E-4 KNPL=0.3353 KNSL=0.07806 KNPR=621.29 KNSR=5.842E6
++ CCG=7.5P CGP=3.3P CCP=0.012P VGOFF=-0.6 IGA=3E-10 IGB=0.02556 IGC=20 IGEX=1.413
+* Vp_MAX=350 Ip_MAX=35 Vg_step=1 Vg_start=0 Vg_count=10
+* X_MIN=58 Y_MIN=202 X_SIZE=746 Y_SIZE=406 FSZ_X=1296 FSZ_Y=736 XYGrid=false
+* Rp=1600 Vg_ac=23.5 P_max=2.5 Vg_qui=-23.4 Vp_qui=240
+* showLoadLine=n showIp=y isDHP=n isPP=n isAsymPP=n isUL=n showDissipLimit=y
+* showIg1=y isInputSnapped=n addLocalNFB=n
+* XYProjections=n harmonicPlot=y dissipPlot=n
+* UL=0.43 EG2=170 gridLevel2=y addKink=y isTanhKnee=n advSigmoid=y
+*/                
+            }
+        ]
+    },
+    {
+        name: "6P25B",
+        type: "tetrode",
+        datasheet: "https://rudatasheet.ru/tubes/6p25b/",
+        defaults: {
+            Bplus: 110,
+            Rp: 22500,
+            Iq: 0.03,
+            Vg2: 110,
+        },
+        limits: {
+            maxPp: 4.1,
+            maxVp: 160,
+            maxIp: 0.08,
+            minVg: -20,
+            maxVg: 0,
+            maxVg2: 200,
+            gridStep: 2,
+        },
+        models: [
+            {
+                type: "koren-nizhegorodov",
+                attribution: "koonw",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-166",
+                MU: 7.268,
+                KG1: 1385.86,
+                KP: 29.56,
+                KVB: 12,
+                VCT: 0.2,
+                EX: 1.288, 
+                KG2: 2633.9,
+                KNEE: 21.01,
+                KVC: 1.592,
+                KLAM: 1.18E-6,
+                KLAMG: 8.982E-4,
+                tanhKnee: {
+                    KNEE2: 9.32,
+                    KNEX: 2.423,
+                },
+                addKink: {
+                    KNK: -0.2328,
+                    KNG: 0.0383,
+                    KNPL: 23.23,
+                    KNSL: 10.45,
+                    KNPR: 29.34,
+                    KNSR: 34.62,
+                }
+/*
++ PARAMS: MU=7.268 KG1=1385.86 KP=29.56 KVB=12 VCT=0.2 EX=1.288 KG2=2633.9 KNEE=21.01 KVC=1.592
++ KLAM=1.18E-6 KLAMG=8.982E-4 KNEE2=9.32 KNEX=2.423  KNK=-0.2328 KNG=0.0383 KNPL=23.23 KNSL=10.45 KNPR=29.34 KNSR=34.62
++ CCG=6.7P CGP=6.2P CCP=0.8P VGOFF=-0.6 IGA=0.001 IGB=0.3 IGC=8 IGEX=2
+* Vp_MAX=250 Ip_MAX=65 Vg_step=4 Vg_start=0 Vg_count=11
+* X_MIN=36 Y_MIN=13 X_SIZE=803 Y_SIZE=519 FSZ_X=1296 FSZ_Y=736 XYGrid=true
+* Rp=1400 Vg_ac=20 P_max=4.1 Vg_qui=-20 Vp_qui=300
+* showLoadLine=n showIp=y isDHP=n isPP=n isAsymPP=n isUL=n showDissipLimit=y
+* showIg1=y isInputSnapped=y addLocalNFB=n
+* XYProjections=n harmonicPlot=y dissipPlot=n
+* UL=0.43 EG2=110 gridLevel2=y addKink=y isTanhKnee=y advSigmoid=n
+*/
+            }
+        ]
     }
 ];
+
+
