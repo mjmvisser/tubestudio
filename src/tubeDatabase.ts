@@ -265,6 +265,42 @@ export const tubeDatabase : TubeInfo[] = [
 */
             }
         ]
+    },
+    {
+        name: "6V6",
+        type: "tetrode",
+        datasheet: "https://frank.pocnet.net/sheets/127/6/6V6.pdf",
+        defaults: {
+            Bplus: 340,
+            Rp: 8000,
+            Iq: 0.032,
+            Vg2: 300,
+        },
+        limits: {
+            maxPp: 14,
+            maxVp: 500,
+            maxIp: 0.170,
+            minVg: -30,
+            maxVg: 0,
+            maxVg2: 340,
+            gridStep: 5,
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "ayumi",
+                source: "https://ayumi.cava.jp/audio/pctube/node48.html",
+                G: 0.00060166202,
+                muc: 7.0192317,
+                alpha: 0.559517723002632,
+                Vgo: 0.99999998,
+                Glim: 0.00112921,
+                Xg: 0.45544727730005935,
+                r: 0.083999767,
+                Ea: -3125,
+            }
+
+        ]
     }
 ];
 
