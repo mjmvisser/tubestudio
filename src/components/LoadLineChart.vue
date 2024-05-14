@@ -676,7 +676,7 @@ const contextMenuItems = computed(() => [
                         </div>
                     </div>
                     <div class="col-3 py-2">
-                        <InputNumber v-model="amp.Rk" :min=0 :step="proportionalStep(amp.Rk)" :maxFractionDigits=0 showButtons
+                        <InputNumber v-model="amp.Rk" :min=0 :step="proportionalStep(amp.Rk!)" :maxFractionDigits=0 showButtons
                             :disabled="amp == null || amp.model === null || amp.biasMethod !== 'cathode'" />
                     </div>
                 </template>
