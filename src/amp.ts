@@ -333,7 +333,10 @@ export class Amp implements AmpState {
         const previousBiasMethod = this._biasMethod;
         this._biasMethod = biasMethod;
         this.guard('biasMethod', () => {
-            this.recalculateRk();
+            if (biasMethod === 'cathode' && previousBiasMethod === 'fixed') {
+                // switching from fixed to cathode, reset Rk
+                this.recalculateRk();
+            }
             this.recalculateVg();
             this.recalculateIq();
         });
