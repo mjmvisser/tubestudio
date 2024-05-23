@@ -98,7 +98,7 @@ export class Amp implements AmpState {
 
     private setVq(Vq: number) {
         if (this.loadType === 'resistive') {
-            this._Vq = clamp(Vq, 0, this.limits.maxVp);
+            this._Vq = clamp(Vq, 0, this.limits.maxVp0);
             console.log(`Vq=${this._Vq}`);
         }
     }
@@ -473,7 +473,7 @@ export class Amp implements AmpState {
 
     graphVpIp(Vg: number): Point[]  {
         if (this.model) {
-            return simplify(range(0, this.limits.maxVp, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp)})), 0.000005, true);
+            return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp)})), 0.000005, true);
         } else {
             return [];
         }
@@ -487,7 +487,7 @@ export class Amp implements AmpState {
     }
 
     graphPp(): Point[] {
-        return simplify(range(0, this.limits.maxVp, 1).map(Vp => ({x: Vp, y: this.limits.maxPp / Vp})), 0.00001, true);
+        return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.limits.maxPp / Vp})), 0.00001, true);
     }
 
     graphOperatingPoint(): Point[] {
