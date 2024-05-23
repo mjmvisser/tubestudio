@@ -328,7 +328,7 @@ const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
                         stepSize: 50
                     },
                     min: 0,
-                    max: amp.value.limits.maxVp,
+                    max: amp.value.limits.maxVp0,
                     title: { display: true, text: 'Vp (V)' }
                 },
                 y: {
@@ -505,6 +505,13 @@ const contextMenuItems = computed(() => [
                     </div>
                 </div>
             </div>
+            <div class="col-2 py-2">
+                <div class="text-left">
+                    <template v-if="selectedTube !== null && selectedModel !== null">
+                        <a :href="tubeDatabase[selectedTube].datasheet">Datasheet</a>
+                    </template>
+                </div>
+            </div>
             <div class="col-4 py-2">
                 <div class="text-left">
                     Model
@@ -516,13 +523,6 @@ const contextMenuItems = computed(() => [
                 <div class="text-left">
                     <template v-if="selectedTube !== null && selectedModel !== null">
                         <a :href="tubeDatabase[selectedTube].models[selectedModel].source">Source</a>
-                    </template>
-                </div>
-            </div>
-            <div class="col-2 py-2">
-                <div class="text-left">
-                    <template v-if="selectedTube !== null && selectedModel !== null">
-                        <a :href="tubeDatabase[selectedTube].datasheet">Datasheet</a>
                     </template>
                 </div>
             </div>
@@ -579,7 +579,7 @@ const contextMenuItems = computed(() => [
                     <label v-tooltip="'The DC voltage of the power supply at the plate load'">B+ (V)</label>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Bplus" :min=0 :max=amp.limits.maxVp :maxFractionDigits=2 showButtons
+                    <InputNumber v-model="amp.Bplus" :min=0 :max=amp.limits.maxVp0 :maxFractionDigits=2 showButtons
                         :step="proportionalStep(amp.Bplus)" :disabled="amp == null" />
                 </div>
                 <template v-if="amp.model">
@@ -710,8 +710,11 @@ const contextMenuItems = computed(() => [
                     </label>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.inputHeadroom" :maxFractionDigits=4 :min=0 :step=0.01 showButtons
-                        :disabled="amp == null" />
+                    <div class="flex flex-column align-items-left">
+                        <InputNumber v-model="amp.inputHeadroom" :maxFractionDigits=4 :min=0 :step=0.01 showButtons
+                            :disabled="amp == null" />
+                        <div class="py-2">{{ amp.inputHeadroom !== undefined ? (amp.inputHeadroom * 0.70710678118).toFixed(2) + ' V rms' : '' }} </div>
+                    </div>
                 </div>
                 <div v-if="amp.inputHeadroom" class="col-2 py-2">
                     <label v-tooltip="'The voltage swing of the output signal'">
