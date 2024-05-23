@@ -81,12 +81,10 @@ export class Amp implements AmpState {
         this.ultralinearTap = this.mode === 'triode' ? 100 : 40;
         this.Bplus = this.defaults.Bplus;
         this.Iq = this.defaults.Iq;
-        this.Vg = 0;
         this.Vg2 = this.defaults.Vg2;
         this.biasMethod = this.type === 'triode' ? 'cathode' : 'fixed';
         this.loadType = this.type === 'triode' ? 'resistive' : 'reactive';
         this.Rp = this.defaults.Rp;
-        this.Rk = 0;
         this.Znext = 0;
         
         this._dcLoadLine = loadLineFactory.createDCLoadLine(this.topology, this.loadType, this as Readonly<AmpState>);
@@ -130,11 +128,17 @@ export class Amp implements AmpState {
 
     private recalculateVg() {
         if (this.model) {
-            if (this.biasMethod === 'cathode') {
-                this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
-            } else {
+            // if (this.biasMethod === 'cathode' && this.Rk !== undefined) {
+            //     this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
+            // } else {
                 this.setVg(this.model.Vg(this.Vq, this.Iq));
-            }
+            // }
+        }
+    }
+
+    private recalculateVgFromRk() {
+        if (this.model && this.biasMethod === 'cathode' && this.Rk !== undefined) {
+            this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
         }
     }
 
@@ -161,10 +165,13 @@ export class Amp implements AmpState {
     }
 
     private recalculateRk() {
-        this.setRk(this._cathodeLoadLine.Rk());
+        if (this.model && this.Vg !== undefined) {
+            this.setRk(this._cathodeLoadLine.Rk());
+        }
     }
 
     private guard(prop: keyof AmpState, f: () => void) {
+        console.log("---------");
         if (!this._guard[prop]) {
             this._guard[prop] = true;
             f();
@@ -233,13 +240,11 @@ export class Amp implements AmpState {
     set Bplus(Bplus) { 
         this._Bplus = Bplus;
         this.guard('Bplus', () => {
-            this.recalculateVq();
-            this.recalculateVg();
+            this.setVq(this._dcLoadLine.Vq());
+            if (this.model) {
+                this.setVg(this.model.Vg(this.Vq, this.Iq));
+            }
         });
-        // this.setVq(this._dcLoadLine.Vq());
-        // if (this.model) {
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
-        // }
     }
 
     get Vq() { 
@@ -272,18 +277,15 @@ export class Amp implements AmpState {
     get Iq() { return this._Iq; }
     set Iq(Iq) {
         this.setIq(Iq);
-        this.guard('Vq', () => {
-            this.recalculateVq();
-            this.recalculateVg();
-            this.recalculateRk();
-        });
-        // this.setVq(this._dcLoadLine.Vq());
-        // if (this.model) {
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
-        //     if (this.biasMethod === 'cathode') {
-        //         this.setRk(this._cathodeLoadLine.Rk());
-        //     }
-        // }
+        this.guard('Iq', () => {
+        this.setVq(this._dcLoadLine.Vq());
+            if (this.model) {
+                this.setVg(this.model.Vg(this.Vq, this.Iq));
+                if (this.biasMethod === 'cathode') {
+                    this.setRk(this._cathodeLoadLine.Rk());
+                }
+            }
+    });
     }
     
     get Vg() { return this._Vg; }
@@ -397,7 +399,7 @@ export class Amp implements AmpState {
         if (Rk !== undefined) {
             this.setRk(Rk);
             this.guard('Rk', () => {
-                this.recalculateVg();
+                this.recalculateVgFromRk();
                 this.recalculateVq();
                 this.recalculateIq();
             });
