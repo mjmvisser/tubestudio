@@ -23,14 +23,14 @@ class AyumiTriodeSpiceModelParser {
     }
 
     parse(spice) {
-        const BGG_re = /BGG   GG   0 V=V\(G,K\)\+([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
+        const BGG_re = /BGG\s+GG\s+0\s+V=V\(G,K\)\+([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
         const BGG_match = BGG_re.exec(spice);
         if (!BGG_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BGG");
         }
         const Vgo = parseFloat(BGG_match[1]);
 
-        const BM1_re = /BM1   M1   0 V=\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(A\,K\)\)\+1e-10\)\)\^([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
+        const BM1_re = /BM1\s+M1\s+0\s+V=\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(A\,K\)\)\+1e-10\)\)\^([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
         const BM1_match = BM1_re.exec(spice);
         if (!BM1_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BM1");
@@ -43,7 +43,7 @@ class AyumiTriodeSpiceModelParser {
         const c = 3 * alpha - 1;
         const muc = c / 2 / c_2_muc;        
 
-        const BM2_re = /BM2   M2   0 V=\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(GG\)\+URAMP\(V\(A\,K\)\)\/([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\)\+1e-10\)\)\^([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
+        const BM2_re = /BM2\s+M2\s+0\s+V=\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(GG\)\+URAMP\(V\(A\,K\)\)\/([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\)\+1e-10\)\)\^([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)/gm;
         const BM2_match = BM2_re.exec(spice);
         if (!BM2_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BM2");
@@ -58,7 +58,7 @@ class AyumiTriodeSpiceModelParser {
             throw new Error("AyumiTriodeSpiceModelParser.parse: check failed on BM2");
         }
 
-        const BP_re = /BP    P    0 V=([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(GG\)\+URAMP\(V\(A\,K\)\)\/([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\)\+1e-10\)\^1\.5/gm;
+        const BP_re = /BP\s+P\s+0\s+V=([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*\(URAMP\(V\(GG\)\+URAMP\(V\(A\,K\)\)\/([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\)\+1e-10\)\^1\.5/gm;
         const BP_match = BP_re.exec(spice);
         if (!BP_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BP");
@@ -71,7 +71,7 @@ class AyumiTriodeSpiceModelParser {
             throw new Error("AyumiTriodeSpiceModelParser.parse: check failed on BP");
         }
 
-        const BIK_re = /BIK   IK   0 V=U\(V\(GG\)\)\*V\(P\)\+\(1-U\(V\(GG\)\)\)\*([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*V\(M1\)\*V\(M2\)/gm;
+        const BIK_re = /BIK\s+IK\s+0\s+V=U\(V\(GG\)\)\*V\(P\)\+\(1-U\(V\(GG\)\)\)\*([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*V\(M1\)\*V\(M2\)/gm;
         const BIK_match = BIK_re.exec(spice);
         if (!BIK_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BIK");
@@ -83,7 +83,7 @@ class AyumiTriodeSpiceModelParser {
             throw new Error("AyumiTriodeSpiceModelParser.parse: check failed on BIK");
         }
 
-        const BIG_re = /BIG   IG   0 V=([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*URAMP\(V\(G\,K\)\)\^1.5\*\(URAMP\(V\(G\,K\)\)\/\(URAMP\(V\(A\,K\)\)\+URAMP\(V\(G\,K\)\)\)\*1\.2\+0\.4\)/gm;
+        const BIG_re = /BIG\s+IG\s+0\s+V=([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*URAMP\(V\(G\,K\)\)\^1.5\*\(URAMP\(V\(G\,K\)\)\/\(URAMP\(V\(A\,K\)\)\+URAMP\(V\(G\,K\)\)\)\*1\.2\+0\.4\)/gm;
         const BIG_match = BIG_re.exec(spice);
         if (!BIG_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BIG");
@@ -91,7 +91,7 @@ class AyumiTriodeSpiceModelParser {
 
         const m = parseFloat(BIG_match[1]); // m = Xg * Glim
 
-        const BIAK_re = /BIAK  A    K I=URAMP\(V\(IK\,IG\)-URAMP\(V\(IK\,IG\)-\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*URAMP\(V\(A\,K\)\)\^1\.5\)\)\)\+1e-10\*V\(A\,K\)/gm;
+        const BIAK_re = /BIAK\s+A\s+K\s+I=URAMP\(V\(IK\,IG\)-URAMP\(V\(IK\,IG\)-\(([+-]?(?:[0-9]+[.])?[0-9]+(?:e[+-][1-9][0-9]*)?)\*URAMP\(V\(A\,K\)\)\^1\.5\)\)\)\+1e-10\*V\(A\,K\)/gm;
         const BIAK_match = BIAK_re.exec(spice);
         if (!BIAK_match) {
             throw new Error("AyumiTriodeSpiceModelParser.parse: malformed BIAK");
@@ -121,7 +121,7 @@ const inputText = fs.readFileSync(0, 'utf-8');
 const ayumiTriodeSpiceModelParser = new AyumiTriodeSpiceModelParser();
 
 if (ayumiTriodeSpiceModelParser.matches(inputText)) {
-    console.log(JSON.stringify(ayumiTriodeSpiceModelParser.parse(inputText)));
+    console.log(JSON.stringify(ayumiTriodeSpiceModelParser.parse(inputText), null, 4));
 }
 
 
