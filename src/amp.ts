@@ -105,33 +105,33 @@ export class Amp implements AmpState {
     private setVq(Vq: number) {
         if (this.loadType === 'resistive') {
             this._Vq = clamp(Vq, 0, this.limits.maxVp0);
-            console.log(`Vq=${this._Vq}`);
+            //console.log(`Vq=${this._Vq}`);
         }
     }
 
     private setIq(Iq: number) {
         this._Iq = clamp(Iq, 0, Math.min(this._dcLoadLine.I(0), this.limits.maxIp));
-        console.log(`Iq=${this._Iq}`);
+        //console.log(`Iq=${this._Iq}`);
     }
 
     private setVg(Vg: number) {
         this._Vg = clamp(Vg, this.limits.minVg, this.limits.maxVg);        
-        console.log(`Vg=${this._Vg}`);
+        //console.log(`Vg=${this._Vg}`);
     }
 
     private setVg2(Vg2: number) {
         this._Vg2 = clamp(Vg2, 0, this.limits.maxVg2);
-        console.log(`Vg2=${this._Vg2}`);
+        //console.log(`Vg2=${this._Vg2}`);
     }
 
     private setRp(Rp: number) {
         this._Rp = Math.max(0, Rp);
-        console.log(`Rp=${this._Rp}`);
+        //console.log(`Rp=${this._Rp}`);
     }
 
     private setRk(Rk: number) {
         this._Rk = Math.max(0, Rk);
-        console.log(`Rk=${this._Rk}`);
+        //console.log(`Rk=${this._Rk}`);
     }
 
     private recalculateVg() {
@@ -179,7 +179,6 @@ export class Amp implements AmpState {
     }
 
     private guard(prop: keyof AmpState, f: () => void) {
-        console.log("--------- " + prop);
         if (!this._guard[prop]) {
             this._guard[prop] = true;
             f();
