@@ -95,6 +95,38 @@ export const tubeDatabase : TubeInfo[] = [
         ]
     },
     {
+        name: "7025",
+        type: "triode",
+        datasheet: "https://frank.pocnet.net/sheets/168/7/7025.pdf",
+        defaults: {
+            Bplus: 300,
+            Rp: 220000,
+            Iq: 0.0006,
+        },
+        limits: {
+            maxPp: 1,
+            maxVp: 330,
+            maxVp0: 500,
+            maxIp: 0.004,
+            minVg: -5,
+            maxVg: 0,
+            gridStep: 0.5,
+        },
+        models: [
+            {
+                type: "koren",
+                attribution: "koren",
+                source: "https://www.normankoren.com/Audio/Tube_params.html",
+                mu: 103.44,
+                ex: 1.245,
+                Kg1: 1515.4,
+                Kp: 903.23,
+                Kvb: 99.2,
+                Vct: 0.5
+            }
+        ]
+    },
+    {
         name: "6L6GC",
         type: "pentode",
         datasheet: "https://frank.pocnet.net/sheets/127/6/6L6GC.pdf",
@@ -188,7 +220,7 @@ export const tubeDatabase : TubeInfo[] = [
         },
         models: [
             {
-                type: "koren-nizhegorodov",
+                type: "paintkip",
                 attribution: "koonw",
                 source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-166",
                 MU: 51.5,
@@ -308,10 +340,10 @@ export const tubeDatabase : TubeInfo[] = [
         type: "tetrode",
         datasheet: "https://frank.pocnet.net/sheets/127/6/6V6.pdf",
         defaults: {
-            Bplus: 340,
+            Bplus: 285,
             Rp: 8000,
-            Iq: 0.032,
-            Vg2: 300,
+            Iq: 0.035,
+            Vg2: 250,
         },
         limits: {
             maxPp: 14,
@@ -338,9 +370,23 @@ export const tubeDatabase : TubeInfo[] = [
                 Ea: -3125,
             },
             {
+                type: "koren",
+                attribution: "jgreen",
+                source: "https://www.iceamplifiers.co.uk/index.php?cont=./spice/6V6GT.html&head=1&foot=1",
+                mu: 12.67,
+                ex: 1.198,
+                Kg1: 915.0,
+                Kp: 38.07,
+                Kg2: 4500,
+                Kvb: 30.2,
+                Vct: 0,
+            },
+            {
                 type: "weaver",
                 attribution: "weaver",
                 source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/post-3667593",
+                mu: 12.67,  // from https://www.iceamplifiers.co.uk/index.php?cont=./spice/6V6GT.html&head=1&foot=1
+                kg2: 4500,  // from https://www.iceamplifiers.co.uk/index.php?cont=./spice/6V6GT.html&head=1&foot=1
                 EcRef: 0,
                 EsRef: 250,
                 g0: 2.9777E-03,
@@ -360,6 +406,212 @@ export const tubeDatabase : TubeInfo[] = [
             }
 
 
+        ]
+    },
+    {
+        name: "6N16B",
+        type: "triode",
+        datasheet: "https://frank.pocnet.net/sheets/113/6/6N16B.pdf",
+        defaults: {
+            Bplus: 250,
+            Rp: 22000,
+            Iq: 0.0063,
+        },
+        limits: {
+            maxPp: 0.9,
+            maxVp: 200,
+            maxVp0: 350,
+            maxIp: 0.014,
+            maxVg: 0,
+            minVg: -10,
+            gridStep: 1
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "cogsncogs",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-141#post-6517463",
+                G: 0.0017414379,
+                muc: 20.345725754852303,
+                alpha: 0.5149117604361072,
+                Vgo: -0.22873155,
+                Glim: 0.0031872368,
+                Xg: 0.47432845278392877                
+            }
+        ]
+    },
+    {
+        name: "6N17B",
+        type: "triode",
+        datasheet: "https://frank.pocnet.net/sheets/113/6/6N17B.pdf",
+        defaults: {
+            Bplus: 250,
+            Rp: 22000,
+            Iq: 0.0033,
+        },
+        limits: {
+            maxPp: 0.9,
+            maxVp: 250,
+            maxVp0: 350,
+            maxIp: 0.01,
+            maxVg: 0,
+            minVg: -6,
+            gridStep: 0.5,
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "cogsncogs",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-141#post-6517463",
+                G: 0.0081637051,
+                muc: 44.708457869267896,
+                alpha: 0.7181753930931891,
+                Vgo: -0.35544294,
+                Glim: 0.0043739599,
+                Xg: 0.49299135092665114
+            }
+        ]
+    },
+    {
+        name: "6N21B",
+        type: "triode",
+        datasheet: "https://frank.pocnet.net/sheets/113/6/6N21B.pdf",
+        defaults: {
+            Bplus: 250,
+            Rp: 22000,
+            Iq: 0.0035,
+        },
+        limits: {
+            maxPp: 1,
+            maxVp: 250,
+            maxVp0: 350,
+            maxIp: 0.01,
+            maxVg: 0.5,
+            minVg: -3,
+            gridStep: 0.5,
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "cogsncogs",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-141#post-6517463",
+                G: 0.004751622,
+                muc: 46.775302409036854,
+                alpha: 0.6943293696411353,
+                Vgo: 0.22747067,
+                Glim: 0.0035909401000000004,
+                Xg: 0.4927373196784875
+            }
+        ]
+    },
+    {
+        name: "6P30B",
+        type: "pentode",
+        datasheet: "https://frank.pocnet.net/sheets/113/6/6P30B.pdf",
+        defaults: {
+            Bplus: 120,
+            Rp: 8000,
+            Iq: 0.035,
+            Vg2: 120,
+        },
+        limits: {
+            maxPp: 5.5,
+            maxVp: 250,
+            maxVp0: 350,
+            maxIp: 0.150,
+            maxVg2: 250,
+            maxVg: 0,
+            minVg: -30,
+            gridStep: 2
+        },
+        models: [
+            {
+                type: "paintkip",
+                attribution: "koonw",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-173#post-7168490",
+                MU: 6.837,
+                KG1: 773.95,
+                KP: 23.65,
+                KVB: 563.29,
+                VCT: -0.2423,
+                EX: 1.148,
+                KG2: 1451.75,
+                KNEE: 94.96,
+                KVC: 1.751,
+                KLAM: 9.875e-9,
+                KLAMG: 0.001102,
+                advSigmoid: {
+                    KD: 0.0003623,
+                    KC: 94754.67,
+                    KR1: 3153.92,
+                    KR2: 0.025,
+                    KVBG: 0.1002,
+                    KB1: 7.012,
+                    KB2: 0.00941,
+                    KB3: 2.133,
+                    KB4: 0.2661,
+                    KVBGI: 0.1562
+                },
+                addKink: {
+                    KNK: -151.04,
+                    KNG: 0.01941,
+                    KNPL: 1826.35,
+                    KNSL: 245447.88,
+                    KNPR: 1826.35,
+                    KNSR: 12.71
+                }
+            }
+        ]
+    },
+    {
+        name: "6P37N-V",
+        type: "tetrode",
+        datasheet: "https://lampes-et-tubes.info/rt/6P37N-V.pdf",
+        defaults: {
+            Bplus: 100,
+            Iq: 0.125,
+            Rp: 2200,
+            Vg2: 100,
+        },
+        limits: {
+            maxPp: 15,
+            maxVp: 300,
+            maxVp0: 300,
+            maxVg2: 200,
+            maxIp: 0.400,
+            maxVg: 0,
+            minVg: -20,
+            gridStep: 2
+        },
+        models: [
+            {
+                type: "paintkip",
+                attribution: "mjmvisser",
+                source: "https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/post-7711675",
+                MU: 19.75,
+                KG1: 3731.2,
+                KP: 8.656,
+                KVB: 0.5,
+                VCT: 0.272,
+                EX: 2.563,
+                KG2: 1029,
+                KNEE: 12.74,
+                KVC: 2.57,
+                KLAM: 0.00005319,
+                KLAMG: 0.000168,
+                advSigmoid: {
+                    KD: 0.003648,
+                    KC: 0.1008,
+                    KR1: 0.003744,
+                    KR2: 0.04288,
+                    KVBG: 0.009,
+                    KB1: 1.8,
+                    KB2: 3.4,
+                    KB3: 1.84,
+                    KB4: 1,
+                    KVBGI: 1.597
+                }            
+            }
         ]
     }
 ];
