@@ -5,15 +5,23 @@ import simplify from 'simplify-js';
 import { loadLineFactory, ACLoadLine, CathodeLoadLine, intersectCharacteristicWithLoadLineV, intersectLoadLines } from "@/loadLines";
 import type { DCLoadLine } from "@/loadLines";
 
-export interface Point {
+export interface CharacteristicPoint {
     x: number;
     y: number;
     Vg?: number;
 }
 
-export interface VgVpIp {
+export interface OutputSample {
+    x: number,
+    y: number,
+    Ip: number,
+    Vp: number,
+    Vp_inv?: number
+}
+
+export interface CharacteristicCurve {
     Vg: number;
-    VpIp: Point[];
+    VpIp: CharacteristicPoint[];
 }
 
 export interface AmpState {
@@ -171,7 +179,7 @@ export class Amp implements AmpState {
     }
 
     private guard(prop: keyof AmpState, f: () => void) {
-        console.log("---------");
+        console.log("--------- " + prop);
         if (!this._guard[prop]) {
             this._guard[prop] = true;
             f();
@@ -293,20 +301,21 @@ export class Amp implements AmpState {
         if (Vg !== undefined) {
             this.setVg(Vg);
             this.guard('Vg', () => {
-                this.recalculateVq();
-                this.recalculateIq();
-                this.recalculateRk();
+                // this.recalculateVq();
+                // this.recalculateIq();
+                // this.recalculateRk();
+                if (this.model && this.Vg !== undefined) {
+                    // TODO: move this into the loadline
+                    if (this.loadType === 'resistive') {
+                        this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+                        this.setIq(this._dcLoadLine.I(this.Vq));
+                    } else {
+                        this.setIq(this.model.Ip(this.Vg, this.Vq));
+                    }
+                    this.setRk(this._cathodeLoadLine.Rk());
+                }
+
             });
-            // if (this.model && this.Vg !== undefined) {
-            //     // TODO: move this into the loadline
-            //     if (this.loadType === 'resistive') {
-            //         this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
-            //         this.setIq(this._dcLoadLine.I(this.Vq));
-            //     } else {
-            //         this.setIq(this.model.Ip(this.Vg, this.Vq));
-            //     }
-            //     this.setRk(this._cathodeLoadLine.Rk());
-            // }
         }
     }
    
@@ -448,20 +457,48 @@ export class Amp implements AmpState {
         }
     }
 
-    outputPeakToPeakRMS() : number {
+    outputVoltageRMS() : number {
         const sineWave = this.graphAmplifiedSineWave();
         return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + value.y*value.y), 0)/sineWave.length);
     }
 
-    graphDCLoadLine() : Point[] {
+    averageOutputPower() : number {
+        const sineWave = this.graphAmplifiedSineWave();
+        return sineWave.reduce((accumulator, value) => (accumulator + Math.abs(value.y) * value.Ip!), 0)/sineWave.length;
+    }
+
+    maxOutputPower() : number | undefined {
+        if (this._dcLoadLine && this.model) {
+            const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine);
+            const maxIp = this.model.Ip(0, minVp);
+
+            return (this.Vq - minVp) * maxIp / 2;
+        }   
+    }
+
+    effectiveAmplificationFactor() : number {
+        if (this._dcLoadLine && this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
+            const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!+this.inputHeadroom!, loadLine);
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!-this.inputHeadroom!, loadLine);
+
+
+            return (maxVp - minVp) / (this.inputHeadroom! * 2);
+        } else { 
+            return 0;
+        }
+    }
+
+    graphDCLoadLine() : CharacteristicPoint[] {
         return this._dcLoadLine.getLine();
     }
 
-    graphACLoadLine() : Point[] {
+    graphACLoadLine() : CharacteristicPoint[] {
         return this._acLoadLine.getLine();
     }
 
-    graphCathodeLoadLine(): Point[] {
+    graphCathodeLoadLine(): CharacteristicPoint[] {
         if (this._cathodeLoadLine && this.model) {
             return simplify(range(this.limits.minVg, this.limits.maxVg, this.limits.gridStep / 10).map(Vg => {
                 const I = this._cathodeLoadLine.I(Vg);
@@ -473,7 +510,7 @@ export class Amp implements AmpState {
         }
     }
 
-    graphVpIp(Vg: number): Point[]  {
+    graphVpIp(Vg: number): CharacteristicPoint[]  {
         if (this.model) {
             return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp)})), 0.000005, true);
         } else {
@@ -481,18 +518,18 @@ export class Amp implements AmpState {
         }
     }
     
-    graphVgVpIp(): {Vg: number, VpIp: Point[]}[] {
+    graphVgVpIp(): {Vg: number, VpIp: CharacteristicPoint[]}[] {
         return range(this.limits.minVg, this.limits.maxVg, this.limits.gridStep).map(Vg => ({
             'Vg': Vg,
             'VpIp': this.graphVpIp(Vg)
         }));
     }
 
-    graphPp(): Point[] {
+    graphPp(): CharacteristicPoint[] {
         return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.limits.maxPp / Vp})), 0.00001, true);
     }
 
-    graphOperatingPoint(): Point[] {
+    graphOperatingPoint(): CharacteristicPoint[] {
         if (this._dcLoadLine) {
             return [{x: this.Vq, y: this.Iq, Vg: this.Vg}];
         } else {
@@ -500,7 +537,7 @@ export class Amp implements AmpState {
         }
     }
     
-    graphHeadroom(): Point[] {
+    graphHeadroom(): CharacteristicPoint[] {
         if (this._dcLoadLine && this.model && this.inputHeadroom !== undefined && this.Vg !== undefined) {
             const minVg = this.Vg - this.inputHeadroom;
             const maxVg = this.Vg + this.inputHeadroom;
@@ -527,20 +564,20 @@ export class Amp implements AmpState {
         }
     }
 
-    graphAmplifiedSineWave() : Point[] {
+    graphAmplifiedSineWave() : OutputSample[] {
         // simulate amplification of a sine wave
         if (this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            return range(0, 2*Math.PI, 2*Math.PI/45).map(t => {
+            return range(0, 2*Math.PI, 2*Math.PI/90).map(t => {
                 const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
-                const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine) - this.Vq;
+                const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine);
+                const Ip = this.model!.Ip(Vg, Vp);
                 if (this.topology === 'pp') {
-                    const Vg_inv = this.Vg! - this.inputHeadroom! * Math.sin(t);
-                    const Vp_inv = intersectCharacteristicWithLoadLineV(this.model!, Vg_inv, loadLine) - this.Vq;
-                    //return {x: t, y: (Vp - this.Vq) - (Vp_inv - this.Vq)};
-                    return {x: t, y: Vp - Vp_inv};
+                    const Vg_inv = this.Vg! + this.inputHeadroom! * Math.sin(-t);
+                    const Vp_inv = intersectCharacteristicWithLoadLineV(this.model!, Vg_inv, loadLine);
+                    return {x: t, y: Vp - Vp_inv, Ip: Ip, Vp: Vp, Vp_inv: Vp_inv};
                 } else {
-                    return {x: t, y: Vp};
+                    return {x: t, y: Vp - this.Vq, Ip: Ip, Vp: Vp};
                 }
             });
         } else {

@@ -1,14 +1,13 @@
-import type { Point } from "chart.js";
 import { range, findRootWithBisection } from './utils.js';
 import { TubeModel } from './tubeModels';
-import type { AmpState } from './amp';
+import type { AmpState, CharacteristicPoint } from './amp';
 
 import simplify from 'simplify-js';
 
 export interface LoadLine {
     I(V: number) : number;
     V(I: number) : number;
-    getLine(): Point[];
+    getLine(): CharacteristicPoint[];
     info(): string;
 }
 
@@ -19,7 +18,7 @@ export abstract class DCLoadLine implements LoadLine {
     abstract V(I: number): number;
     abstract Vq(): number;
     abstract Iq(): number;
-    abstract getLine(): Point[];
+    abstract getLine(): CharacteristicPoint[];
     abstract info(): string;
 }
 
@@ -42,7 +41,7 @@ abstract class DCResistiveLoadLine extends DCLoadLine {
         return this.V(this.ampState.Iq);
     }
 
-    getLine(): Point[] {
+    getLine(): CharacteristicPoint[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.ampState.Bplus, y: this.I(this.ampState.Bplus)};
         return [p1, p2];
@@ -83,7 +82,7 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
         return this.ampState.Vq;
     }
 
-    getLine() : Point[] {
+    getLine() : CharacteristicPoint[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.V(0), y: 0}
         return [p1, p2]
@@ -140,7 +139,7 @@ class DCPushPullReactiveLoadLine extends DCLoadLine {
         return this.ampState.Vq;
     }
 
-    getLine(): Point[] {
+    getLine(): CharacteristicPoint[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.Vlim(), y: this.Ilim()};
         const p3 = {x: this.V(0), y: 0};
@@ -205,7 +204,7 @@ export class CathodeLoadLine implements LoadLine {
         }
     }
 
-    getLine(): Point[] {
+    getLine(): CharacteristicPoint[] {
         return simplify(range(0, 50, 0.5).map(Vg => {
             const I = this.I(Vg);
             const V = this.V(I);
@@ -235,7 +234,7 @@ export class ACLoadLine implements LoadLine {
         return (R * this.ampState.Znext!) / (R + this.ampState.Znext!);
     }
 
-    getLine(): Point[] {
+    getLine(): CharacteristicPoint[] {
         const p1 = {x: 0, y: this.I(0)};
         const p2 = {x: this.V(0), y: 0};
         return [p1, p2];

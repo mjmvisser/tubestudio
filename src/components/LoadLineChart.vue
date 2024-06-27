@@ -9,7 +9,7 @@ import { tubeDatabase } from '@/tubeDatabase';
 import type { TubeInfo } from '@/tubeDatabase';
 import { tubeFactory } from '@/tubeModels';
 import { Amp } from '@/amp';
-import type { Point, VgVpIp } from '@/amp';
+import type { OutputSample, CharacteristicPoint, CharacteristicCurve } from '@/amp';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
@@ -158,7 +158,7 @@ const characteristicChartData = computed(() : ChartData<'scatter'> => {
     showCathodeLoadLine.value;
 
     if (amp.value) {
-        datasets = datasets.concat(amp.value.graphVgVpIp().map((gridCurve: VgVpIp) => ({
+        datasets = datasets.concat(amp.value.graphVgVpIp().map((gridCurve: CharacteristicCurve) => ({
             label: 'Vg=' + gridCurve.Vg + 'V',
             showLine: true,
             pointStyle: false,
@@ -316,7 +316,7 @@ const characteristicChartOptions = computed(() : ChartOptions<'scatter'> => {
                             const itemLabel = item.dataset.label || '';
                             const Vp = item.parsed.x.toFixed(2);
                             const Ip = (item.parsed.y * 1000).toFixed(2);
-                            const Vg = (item.raw as Point).Vg?.toFixed(2);
+                            const Vg = (item.raw as CharacteristicPoint).Vg?.toFixed(2);
                             return itemLabel + ' (Vp: ' + Vp + 'V, Ip: ' + Ip + 'mA' + (Vg !== undefined ? (', Vg: ' + Vg + 'V') : '') + ')';
                         }
                     }
@@ -375,29 +375,76 @@ const outputHeadroomChartData = computed(() : ChartData<'scatter'> => {
     amp.value?.model;
 
     if (amp.value) {
-        return {
-            datasets: [
-                {
-                    showLine: true,
-                    pointStyle: false,
-                    borderColor: '#000000',
-                    backgroundColor: '#000000',
-                    borderWidth: 1,
-                    fill: false,
-                    data: amp.value.graphAmplifiedSineWave()
-                },
-                {
-                    showLine: true,
-                    pointStyle: false,
-                    borderColor: '#8080FF',
-                    backgroundColor: '#8080FF',
-                    borderWidth: 1,
-                    borderDash: [10, 10],
-                    fill: false,
-                    data: [{x: 0, y: 0}, {x: 2*Math.PI, y: 0}]
-                }
-            ]
-        };
+        let datasets : ChartDataset<'scatter'>[] = [];
+
+        // // the V=0 line
+        // datasets.push({
+        //     showLine: true,
+        //     pointStyle: false,
+        //     borderColor: '#8080FF',
+        //     backgroundColor: '#8080FF',
+        //     borderWidth: 1,
+        //     borderDash: [10, 10],
+        //     fill: false,
+        //     data: [{x: 0, y: 0}, {x: 2*Math.PI, y: 0}]
+        // });
+
+        const amplifiedSineWave = amp.value.graphAmplifiedSineWave();
+
+        if (amp.value.topology === 'pp') {
+            // both tubes
+            datasets.push({
+                label: 'Tube 1',
+                showLine: true,
+                pointStyle: false,
+                borderColor: '#FF0000',
+                backgroundColor: '#FF0000',
+                borderWidth: 1,
+                fill: false,
+                data: amplifiedSineWave.map((value: OutputSample, index: number, array: OutputSample[]) => {
+                    return {x: value.x, y: value.Vp! - amp.value!.Vq};
+                })
+            });
+
+            datasets.push({
+                label: 'Tube 2',
+                showLine: true,
+                pointStyle: false,
+                borderColor: '#00FF00',
+                backgroundColor: '#00FF00',
+                borderWidth: 1,
+                fill: false,
+                data: amplifiedSineWave.map((value: OutputSample, index: number, array: OutputSample[]) => {
+                    return {x: value.x, y: value.Vp_inv! - amp.value!.Vq};
+                })
+            });
+
+            // the combined waveform
+            datasets.push({
+                label: 'Combined Output',
+                showLine: true,
+                pointStyle: false,
+                borderColor: '#000000',
+                backgroundColor: '#000000',
+                borderWidth: 1,
+                fill: false,
+                data: amplifiedSineWave
+            });
+        } else {
+            datasets.push({
+                label: 'Output',
+                showLine: true,
+                pointStyle: false,
+                borderColor: '#000000',
+                backgroundColor: '#000000',
+                borderWidth: 1,
+                fill: false,
+                data: amplifiedSineWave
+            });
+        }
+
+        return { datasets: datasets };
+        
     } else {
         return {
             datasets: []
@@ -430,18 +477,23 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
         const [min, max] = amp.value.outputHeadroom();
         return {
 //            animation: false,
+            aspectRatio: 1.25,
             responsive: false,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10
+                    },
                 },
                 tooltip: {
                     enabled: false
                 },
                 title: {
                     display: true,
-                    text: amp.value.outputPeakToPeakRMS().toFixed(1) + ' V rms'
+                    text: amp.value.outputVoltageRMS().toFixed(1) + ' V rms'
                 }
             },
             scales: {
@@ -451,12 +503,19 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     max: 2*Math.PI,
                 },
                 y: {
+                    display: true,
+                    border: {dash: [10, 10]},
+                    grid: {
+                        color: (ctx) => { return (ctx.tick.value === 0 ? '#8080FF' : 'transparent') }
+                    },
                     min: min,
                     max: max,
                     ticks: {
                         callback: (value: number | string, index: number, ticks: Tick[]) => {
                             if (value == min || value == max) {
                                 return (value as number).toFixed(1) + ' V';
+                            } else if (value == 0) {
+                                return "";
                             } else {
                                 return null;
                             }
@@ -584,11 +643,11 @@ const contextMenuItems = computed(() => [
                 </div>
                 <template v-if="amp.model">
                     <div class="col-3 py-2">
-                        <label>Output Power (W)</label>
+                        <label v-tooltip="'The maximum possible power dissipated by the load'">Max Output Power</label>
                     </div>
                     <div class="col-3 py-2">
                         <div class="flex flex-column">
-                            TBD
+                            {{  amp.maxOutputPower()!.toFixed(2) + " W" }}
                         </div>
                     </div>
                 </template>
@@ -703,6 +762,18 @@ const contextMenuItems = computed(() => [
                 </div>
             </div>
 
+            <div v-if="amp.model && amp.loadType === 'resistive'" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
+                <div class="col-3 py-2">
+                    <label v-tooltip="'The input impedance of the following amplifier stage'">
+                        Next Stage Impedance (Ω)
+                    </label>
+                </div>
+                <div class="col-3 py-2">
+                    <InputNumber v-model="amp.Znext" :min=0 :step=1000 showButtons
+                        :disabled="amp == null" />
+                </div>
+            </div>
+
             <div v-if="amp.model" class="grid col-12 align-items-center">
                 <div class="col-3 py-2">
                     <label v-tooltip="'The maximum amplitude of the input signal'">
@@ -716,26 +787,35 @@ const contextMenuItems = computed(() => [
                         <div class="py-2">{{ amp.inputHeadroom !== undefined ? (amp.inputHeadroom * 0.70710678118).toFixed(2) + ' V rms' : '' }} </div>
                     </div>
                 </div>
-                <div v-if="amp.inputHeadroom" class="col-2 py-2">
-                    <label v-tooltip="'The voltage swing of the output signal'">
-                        Output Headroom (V)
-                    </label>
+                <div v-if="amp.inputHeadroom" class="col-6 py-2">
+                    <div class="grid align-items-center">
+                        <div class="col-4 py-2">
+                            <label v-tooltip="'The voltage swing of the output signal'">
+                                Output Headroom
+                            </label>
+                        </div>
+                        <div v-if="amp.inputHeadroom" class="col-8 py-2">
+                            <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData"  />
+                        </div>
+                        <div class="col-4 py-2">
+                            <label v-tooltip="'The average power dissipated by the load'">
+                                Average Output Power
+                            </label>
+                        </div>
+                        <div class="col-8 py-2">
+                            {{ amp.averageOutputPower().toFixed(2) + " W"}}
+                        </div>
+                        <div class="col-4 py-2">
+                            <label v-tooltip="'The effective amplification factor'">
+                                Effective μ
+                            </label>
+                        </div>
+                        <div class="col-8 py-2">
+                            {{ amp.effectiveAmplificationFactor().toFixed(0) }}
+                        </div>
+                    </div>  
                 </div>
-                <div v-if="amp.inputHeadroom" class="col-4 py-2">
-                    <Scatter id="output-headroom-chart" :options="outputHeadroomChartOptions" :data="outputHeadroomChartData"  />
-                </div>
-            </div>
 
-            <div v-if="amp.model && amp.loadType === 'resistive'" class="grid col-12 align-items-center surface-ground border-y-1 border-400">
-                <div class="col-3 py-2">
-                    <label v-tooltip="'The input impedance of the following amplifier stage'">
-                        Next Stage Impedance (Ω)
-                    </label>
-                </div>
-                <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Znext" :min=0 :step=1000 showButtons
-                        :disabled="amp == null" />
-                </div>
             </div>
 
 

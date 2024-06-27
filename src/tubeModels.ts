@@ -39,6 +39,8 @@ abstract class Pentode extends TubeModel {
     protected calculateVg2(Vp: number) : number {
         if (this.ampState.mode === 'ultralinear') {
             return this.ampState.Vq + (this.ampState.ultralinearTap / 100) * (Vp - this.ampState.Vq);
+        } else if (this.ampState.mode === 'triode') {
+            return Vp;
         } else {
             return this.ampState.Vg2;
         }
@@ -247,10 +249,10 @@ class KorenNizhegorodovPentode extends Pentode {
         if (this.params.addKink) {
             // to do: improve this by relacing LIMIT with the approach from 
             // https://www.desmos.com/calculator/64of4ge5ym
-            const magnitude = limit(this.params.addKink.KNK-Vg*this.params.addKink.KNG,0,0.3);
+            const magnitude = limit(this.params.addKink.KNK - Vg * this.params.addKink.KNG,0,0.3);
             let dent_eq = // see https://www.desmos.com/calculator/64of4ge5ym
-            -Math.atan((Vp-this.params.addKink.KNPL)/this.params.addKink.KNSL)  // left side of 'trough' aka kink aka dip
-            +Math.atan((Vp-this.params.addKink.KNPR)/this.params.addKink.KNSR); // right side of 'trough' aka kink aka dip
+                - Math.atan((Vp-this.params.addKink.KNPL)/this.params.addKink.KNSL)  // left side of 'trough' aka kink aka dip
+                + Math.atan((Vp-this.params.addKink.KNPR)/this.params.addKink.KNSR); // right side of 'trough' aka kink aka dip
             dent_eq *= magnitude;
             dent_eq += 1;
             return dent_eq;
@@ -266,6 +268,7 @@ class KorenNizhegorodovPentode extends Pentode {
           
         const v_screen = this.calculateVg2(Vp);
         const triode_ip = this.plateCurrentTriode(v_screen, Vg, this.params.KG1);
+
         return (this.params.advSigmoid
                     ? (triode_ip * this.knee_func_erf(Vp/(
                                                       this.params.KNEE*(this.params.advSigmoid.KVBGI+triode_ip*this.params.KG1*this.params.advSigmoid.KVBG)
@@ -488,6 +491,8 @@ class AyumiPentode extends Pentode {
 
 interface WeaverPentodeParams {
     type: 'weaver'; // Rober Weaver's pentode model from https://www.diyaudio.com/community/threads/vacuum-tube-spice-models.243950/page-2
+    mu: number;
+    kg2: number;
     EcRef: number;
     EsRef: number;
     g0: number;
@@ -523,7 +528,7 @@ class WeaverPentode extends Pentode {
     // Thus we calculate Ig2 using Koren's model.
     Ig2(Vg: number, Vp: number) {
         const Vg2 = this.calculateVg2(Vp);
-        const Ig2 = ((Vg + Vg2) >= 0) ? Math.pow((Vg + Vg2) / this.params.mu, 1.5) / this.params.Kg2 : 0;
+        const Ig2 = ((Vg + Vg2) >= 0) ? Math.pow((Vg + Vg2) / this.params.mu, 1.5) / this.params.kg2 : 0;
 
         return Ig2;
     }
