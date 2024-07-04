@@ -638,7 +638,7 @@ const contextMenuItems = computed(() => [
                     <label v-tooltip="'The DC voltage of the power supply at the plate load'">B+ (V)</label>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Bplus" :min=0 :max=amp.limits.maxVp0 :maxFractionDigits=2 showButtons
+                    <InputNumber v-model="amp.Bplus" :min=0 :maxFractionDigits=2 showButtons
                         :step="proportionalStep(amp.Bplus)" :disabled="amp == null" />
                 </div>
                 <template v-if="amp.model">
@@ -664,14 +664,14 @@ const contextMenuItems = computed(() => [
                         Vq (V)
                     </label>
                     <div class="flex align-items-left">
-                        <InputNumber v-model="amp.Vq" inputId="Vq" :min=0 :max=amp.limits.maxVp :maxFractionDigits=1 
+                        <InputNumber v-model="amp.Vq" inputId="Vq" :min=0 :maxFractionDigits=1 
                             :step="proportionalStep(amp.Vq)" showButtons :disabled="amp == null || amp.loadType === 'reactive'"/>
                     </div>
                     <label for="Iq" class="flex align-items-left">
                         Iq (ma)
                     </label>
                     <div class="flex align-items-left">
-                        <InputNumber v-model="Iq_ma" inputId="Iq" :min=0.001 :max="amp.limits.maxIp * 1000" :maxFractionDigits=2
+                        <InputNumber v-model="Iq_ma" inputId="Iq" :min=0.001 :maxFractionDigits=2
                             :step="proportionalStep(Iq_ma!)" showButtons :disabled="amp == null" />
                     </div>
                 </div>
@@ -696,7 +696,7 @@ const contextMenuItems = computed(() => [
                         </div>
                     </div>
                     <div class="col-3 py-2">
-                        <InputNumber v-model="amp.Vg" :min=amp.limits.minVg :max=amp.limits.maxVg 
+                        <InputNumber v-model="amp.Vg" :max=0 
                             :step="proportionalStep(amp.Vg!)" :maxFractionDigits=2 showButtons :disabled="amp == null || amp.model === null" />
                     </div>
                 </template>                    
@@ -748,7 +748,7 @@ const contextMenuItems = computed(() => [
                     </label>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.Vg2" :min=0 :max="amp.limits.maxVg2" :maxFractionDigits=0 :step=1 showButtons 
+                    <InputNumber v-model="amp.Vg2" :min=0 :maxFractionDigits=0 :step=1 showButtons 
                         :disabled="amp == null || amp.mode === 'triode'"/>
                 </div>
                 <div class="col-3 py-2">

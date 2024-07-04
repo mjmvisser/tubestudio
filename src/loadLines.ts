@@ -54,24 +54,24 @@ abstract class DCResistiveLoadLine extends DCLoadLine {
 
 class DCSingleEndedResistiveLoadLine extends DCResistiveLoadLine {
     R() {
-        return this.ampState.Rp;
+        return this.ampState.Rp + (this.ampState.Rk ?? 0);
     }
 }
 
 class DCPushPullResistiveLoadLine extends DCResistiveLoadLine {
     R() {
         // each tube sees half the load
-        return this.ampState.Rp  / 2;
+        return (this.ampState.Rp + (this.ampState.Rk ?? 0))  / 2;
     }
 }
 
 class DCSingleEndedReactiveLoadLine extends DCLoadLine {
     I(V: number) {
-        return (this.ampState.Vq - V) / this.ampState.Rp + this.ampState.Iq;
+        return (this.ampState.Vq - V) / (this.ampState.Rp + (this.ampState.Rk ?? 0)) + this.ampState.Iq;
     }
     
     V(I: number) {
-        return this.ampState.Vq + this.ampState.Rp * (this.ampState.Iq - I);
+        return this.ampState.Vq + (this.ampState.Rp + (this.ampState.Rk ?? 0)) * (this.ampState.Iq - I);
     }
     
     Iq() {
@@ -94,12 +94,15 @@ class DCSingleEndedReactiveLoadLine extends DCLoadLine {
 }
 
 class DCPushPullReactiveLoadLine extends DCLoadLine {
+    private R() {
+        return this.ampState.Rp + (this.ampState.Rk ?? 0);
+    }
     private Rpa() {
-        return this.ampState.Rp / 2;
+        return this.R() / 2;
     }
 
     private Rpb() {
-        return this.ampState.Rp / 4;
+        return this.R() / 4;
     }
 
     private Vlim() {
@@ -172,9 +175,9 @@ export class CathodeLoadLine implements LoadLine {
         }
     }
 
-    V(I: number): number {
+    V(I: number, Vg2?: number): number {
         if (this.ampState.model) {
-            return this.ampState.model.Vp(this.Vg(I), I);
+            return this.ampState.model.Vp(this.Vg(I), I, Vg2);
         } else {
             return this.ampState.Vq;
         }
@@ -263,16 +266,16 @@ export const loadLineFactory = {
     },
 }
 
-export function intersectCharacteristicWithLoadLineV(model: TubeModel, Vg: number, loadLine: LoadLine): number {
+export function intersectCharacteristicWithLoadLineV(model: TubeModel, Vg: number, loadLine: LoadLine, Vg2?: number): number {
     // find intersection of loadline with characteristic curve at Vg and return Vq
     return findRootWithBisection((Vq) => {
-        return model.Ip(Vg, Vq) - loadLine.I(Vq);
+        return model.Ip(Vg, Vq, Vg2) - loadLine.I(Vq);
     }, 0, 1000, 1000, 0.0000001, 0.0000001);        
 }
 
-export function intersectLoadLines(loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel): number {
+export function intersectLoadLines(loadLine: DCLoadLine, cathodeLoadLine: CathodeLoadLine, tubeModel: TubeModel, Vg2?: number): number {
     return findRootWithBisection((Vg) => {
         const Ip = cathodeLoadLine.I(Vg);
-        return loadLine.V(Ip) - tubeModel.Vp(Vg, Ip);
+        return loadLine.V(Ip) - tubeModel.Vp(Vg, Ip, Vg2);
     }, -200, 0, 1000, 0.0000001, 0.0000001)
 }

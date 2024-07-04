@@ -287,7 +287,7 @@ export const tubeDatabase : TubeInfo[] = [
             maxVp: 170,
             maxVp0: 350,
             maxIp: 0.08,
-            minVg: -20,
+            minVg: -40,
             maxVg: 0,
             maxVg2: 200,
             gridStep: 2,
@@ -347,12 +347,12 @@ export const tubeDatabase : TubeInfo[] = [
         },
         limits: {
             maxPp: 14,
-            maxVp: 315,
+            maxVp: 450,
             maxVp0: 500,
             maxIp: 0.170,
-            minVg: -30,
+            minVg: -40,
             maxVg: 0,
-            maxVg2: 285,
+            maxVg2: 450,
             gridStep: 5,
         },
         models: [
@@ -452,7 +452,7 @@ export const tubeDatabase : TubeInfo[] = [
         limits: {
             maxPp: 0.9,
             maxVp: 250,
-            maxVp0: 350,
+            maxVp0: 500,
             maxIp: 0.01,
             maxVg: 0,
             minVg: -6,
@@ -521,7 +521,7 @@ export const tubeDatabase : TubeInfo[] = [
             maxIp: 0.150,
             maxVg2: 250,
             maxVg: 0,
-            minVg: -30,
+            minVg: -50,
             gridStep: 2
         },
         models: [
@@ -576,11 +576,11 @@ export const tubeDatabase : TubeInfo[] = [
         limits: {
             maxPp: 15,
             maxVp: 300,
-            maxVp0: 300,
+            maxVp0: 500,
             maxVg2: 200,
             maxIp: 0.400,
             maxVg: 0,
-            minVg: -20,
+            minVg: -80,
             gridStep: 2
         },
         models: [

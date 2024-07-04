@@ -139,20 +139,20 @@ export class Amp implements AmpState {
             // if (this.biasMethod === 'cathode' && this.Rk !== undefined) {
             //     this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
             // } else {
-                this.setVg(this.model.Vg(this.Vq, this.Iq));
+                this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
             // }
         }
     }
 
     private recalculateVgFromRk() {
         if (this.model && this.biasMethod === 'cathode' && this.Rk !== undefined) {
-            this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
+            this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model, this.Vg2));
         }
     }
 
     private recalculateVq() {
         if (this.model && this.Vg !== undefined) {
-            this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+            this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine, this.Vg2));
         } else {
             this.setVq(this._dcLoadLine.Vq());
         }
@@ -164,7 +164,7 @@ export class Amp implements AmpState {
                 this.setIq(this._dcLoadLine.Iq());
             } else {
                 if (this.model && this.Vg !== undefined) {
-                    this.setIq(this.model.Ip(this.Vg, this.Vq));
+                    this.setIq(this.model.Ip(this.Vg, this.Vq, this.Vg2));
                 }
             }        
         } else {
@@ -201,10 +201,10 @@ export class Amp implements AmpState {
 
             //     if (this.model && this.Vg !== undefined) {
             //         if (this.loadType === 'resistive') {
-            //             this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+            //             this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine, this.Vg2));
             //             this.setIq(this._dcLoadLine.I(this.Vq));
             //         } else {
-            //             this.setIq(this.model.Ip(this.Vg, this.Vq));
+            //             this.setIq(this.model.Ip(this.Vg, this.Vq, this.Vg2));
             //         }        
             //         this.setRk(this._cathodeLoadLine.Rk());
             //     }
@@ -234,7 +234,7 @@ export class Amp implements AmpState {
             //     this.setRk(this._cathodeLoadLine.Rk());
             // }
             // if (this._model) {
-            //     this.setVg(this._model.Vg(this.Vq, this.Iq));
+            //     this.setVg(this._model.Vg(this.Vq, this.Iq, this.Vg2));
             //     this.setRk(this._cathodeLoadLine.Rk());
             // }
             // if (this.loadType === 'resistive') {
@@ -249,7 +249,7 @@ export class Amp implements AmpState {
         this.guard('Bplus', () => {
             this.setVq(this._dcLoadLine.Vq());
             if (this.model) {
-                this.setVg(this.model.Vg(this.Vq, this.Iq));
+                this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
             }
         });
     }
@@ -274,7 +274,7 @@ export class Amp implements AmpState {
         });
         // this.setIq(this._dcLoadLine.Iq());
         // if (this.model) {
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
+        //     this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
         //     if (this.biasMethod === 'cathode') {
         //         this.setRk(this._cathodeLoadLine.Rk());
         //     }
@@ -287,7 +287,7 @@ export class Amp implements AmpState {
         this.guard('Iq', () => {
         this.setVq(this._dcLoadLine.Vq());
             if (this.model) {
-                this.setVg(this.model.Vg(this.Vq, this.Iq));
+                this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
                 if (this.biasMethod === 'cathode') {
                     this.setRk(this._cathodeLoadLine.Rk());
                 }
@@ -306,10 +306,10 @@ export class Amp implements AmpState {
                 if (this.model && this.Vg !== undefined) {
                     // TODO: move this into the loadline
                     if (this.loadType === 'resistive') {
-                        this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+                        this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine, this.Vg2));
                         this.setIq(this._dcLoadLine.I(this.Vq));
                     } else {
-                        this.setIq(this.model.Ip(this.Vg, this.Vq));
+                        this.setIq(this.model.Ip(this.Vg, this.Vq, this.Vg2));
                     }
                     this.setRk(this._cathodeLoadLine.Rk());
                 }
@@ -330,9 +330,9 @@ export class Amp implements AmpState {
             // if (this.model && this.Vg !== undefined) {
             //     // TODO: move this to loadline
             //     if (this.loadType === 'resistive') {
-            //         this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+            //         this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine, this.Vg2));
             //     }
-            //     this.setVg(this.model.Vg(this.Vq, this.Iq));
+            //     this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
             //     this.setRk(this._cathodeLoadLine.Rk());
             // }
         }
@@ -357,7 +357,7 @@ export class Amp implements AmpState {
         //     }
         // }
         // if (this.model) {
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
+        //     this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
         // }
         // this.setIq(this._dcLoadLine.Iq());
     }
@@ -380,7 +380,7 @@ export class Amp implements AmpState {
             this.recalculateIq();
         });
         // if (this.model) {
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
+        //     this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
         //     this.setRk(this._cathodeLoadLine.Rk());
         // }
     }
@@ -397,7 +397,7 @@ export class Amp implements AmpState {
         // this.setIq(this._dcLoadLine.Iq());
         // this.setVq(this._dcLoadLine.Vq());
         // if (this.model) { 
-        //     this.setVg(this.model.Vg(this.Vq, this.Iq));
+        //     this.setVg(this.model.Vg(this.Vq, this.Iq, this.Vg2));
         //     this.setRk(this._cathodeLoadLine.Rk());
         // }
     }
@@ -412,9 +412,9 @@ export class Amp implements AmpState {
                 this.recalculateIq();
             });
             // if (this.model && this.Vg !== undefined) {
-            //     this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model));
+            //     this.setVg(intersectLoadLines(this._dcLoadLine, this._cathodeLoadLine, this.model, this.Vg2));
             //     if (this.loadType === 'resistive') {
-            //         this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine));
+            //         this.setVq(intersectCharacteristicWithLoadLineV(this.model, this.Vg, this._dcLoadLine, this.Vg2));
             // }
             // this.setIq(this._cathodeLoadLine.Iq());
             // }
@@ -443,8 +443,8 @@ export class Amp implements AmpState {
             const minVg = this.Vg - this.inputHeadroom;
             const maxVg = this.Vg + this.inputHeadroom;
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine) - this.Vq;
-            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine) - this.Vq;
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine, this.Vg2) - this.Vq;
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine, this.Vg2) - this.Vq;
 
             if (this.topology === 'pp') {
                 return [minVp - maxVp, maxVp - minVp]
@@ -469,8 +469,8 @@ export class Amp implements AmpState {
     maxOutputPower() : number | undefined {
         if (this._dcLoadLine && this.model) {
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine);
-            const maxIp = this.model.Ip(0, minVp);
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine, this.Vg2);
+            const maxIp = this.model.Ip(0, minVp, this.Vg2);
 
             return (this.Vq - minVp) * maxIp / 2;
         }   
@@ -479,8 +479,8 @@ export class Amp implements AmpState {
     effectiveAmplificationFactor() : number {
         if (this._dcLoadLine && this.model && this.Vg !== undefined && this.inputHeadroom !== undefined) {
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const minVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!+this.inputHeadroom!, loadLine);
-            const maxVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!-this.inputHeadroom!, loadLine);
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!+this.inputHeadroom!, loadLine, this.Vg2);
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!-this.inputHeadroom!, loadLine, this.Vg2);
 
 
             return (maxVp - minVp) / (this.inputHeadroom! * 2);
@@ -501,7 +501,7 @@ export class Amp implements AmpState {
         if (this._cathodeLoadLine && this.model) {
             return simplify(range(this.limits.minVg, this.limits.maxVg, this.limits.gridStep / 10).map(Vg => {
                 const I = this._cathodeLoadLine.I(Vg);
-                const V = this.model!.Vp(Vg, I);
+                const V = this.model!.Vp(Vg, I, this.Vg2);
                 return {x: V, y: I, Vg: Vg};
             }), 0.00001, true);
         } else {
@@ -511,7 +511,7 @@ export class Amp implements AmpState {
 
     graphVpIp(Vg: number): CharacteristicPoint[]  {
         if (this.model) {
-            return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp)})), 0.000005, true);
+            return simplify(range(0, this.limits.maxVp0, 1).map(Vp => ({x: Vp, y: this.model!.Ip(Vg, Vp, this.Vg2)})), 0.000005, true);
         } else {
             return [];
         }
@@ -541,8 +541,8 @@ export class Amp implements AmpState {
             const minVg = this.Vg - this.inputHeadroom;
             const maxVg = this.Vg + this.inputHeadroom;
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
-            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine);
-            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine);
+            const maxVp = intersectCharacteristicWithLoadLineV(this.model, minVg, loadLine, this.Vg2);
+            const minVp = intersectCharacteristicWithLoadLineV(this.model, maxVg, loadLine, this.Vg2);
 
             let data = [];
             let loadLineData = loadLine.getLine();
@@ -551,7 +551,7 @@ export class Amp implements AmpState {
             // if the loadline has a bend, make sure we take it into account
             loadLineData.forEach(point => {
                 if (point.x > minVp && point.x < maxVp) {
-                    data.push({x: point.x, y: point.y, Vg: this.model!.Vg(point.x, point.y)});
+                    data.push({x: point.x, y: point.y, Vg: this.model!.Vg(point.x, point.y, this.Vg2)});
                 }
             });
 
@@ -569,11 +569,11 @@ export class Amp implements AmpState {
             const loadLine = (this.Znext && this._topology === 'se') ? this._acLoadLine : this._dcLoadLine;
             return range(0, 2*Math.PI, 2*Math.PI/90).map(t => {
                 const Vg = this.Vg! + this.inputHeadroom! * Math.sin(t);
-                const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine);
-                const Ip = this.model!.Ip(Vg, Vp);
+                const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine, this.Vg2);
+                const Ip = this.model!.Ip(Vg, Vp, this.Vg2);
                 if (this.topology === 'pp') {
                     const Vg_inv = this.Vg! + this.inputHeadroom! * Math.sin(-t);
-                    const Vp_inv = intersectCharacteristicWithLoadLineV(this.model!, Vg_inv, loadLine);
+                    const Vp_inv = intersectCharacteristicWithLoadLineV(this.model!, Vg_inv, loadLine, this.Vg2);
                     return {x: t, y: Vp - Vp_inv, Ip: Ip, Vp: Vp, Vp_inv: Vp_inv};
                 } else {
                     return {x: t, y: Vp - this.Vq, Ip: Ip, Vp: Vp};

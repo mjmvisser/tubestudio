@@ -3,19 +3,19 @@ import type { AmpState } from './amp';
 
 export abstract class TubeModel {
     type?: 'triode' | 'pentode';
-    abstract Ip(Vg: number, Vp: number): number;
+    abstract Ip(Vg: number, Vp: number, Vg2?: number): number;
 
     constructor(public ampState: AmpState) {};
 
-    Vg(Vp: number, Ip: number): number {
+    Vg(Vp: number, Ip: number, Vg2?: number): number {
         return findRootWithBisection((Vg) => {
-            return this.Ip(Vg, Vp) - Ip;
+            return this.Ip(Vg, Vp, Vg2) - Ip;
         }, -500, 50, 1000, 0.0000001, 0.0000001);
     }
     
-    Vp(Vg: number, Ip: number): number {
+    Vp(Vg: number, Ip: number, Vg2?: number): number {
         return findRootWithBisection((Vp) => {
-            return this.Ip(Vg, Vp) - Ip;
+            return this.Ip(Vg, Vp, Vg2) - Ip;
         }, 0, 5000, 1000, 0.0000001, 0.0000001);
     }
 }
@@ -34,15 +34,15 @@ abstract class Pentode extends TubeModel {
     type : 'pentode' = 'pentode';
     constructor(public ampState: PentodeAmpState) { super(ampState) };
 
-    abstract Ig2(Vg: number, Vp: number): number;
+    abstract Ig2(Vg: number, Vp: number, Vg2: number): number;
 
-    protected calculateVg2(Vp: number) : number {
+    protected calculateVg2(Vp: number, Vg2: number) : number {
         if (this.ampState.mode === 'ultralinear') {
             return this.ampState.Vq + (this.ampState.ultralinearTap / 100) * (Vp - this.ampState.Vq);
         } else if (this.ampState.mode === 'triode') {
             return Vp;
         } else {
-            return this.ampState.Vg2;
+            return Vg2;
         }
     }
 }
@@ -87,8 +87,8 @@ class KorenPentode extends Pentode {
         super(ampState);
     }
     
-    Ip(Vg: number, Vp: number) {
-        const Vg2 = this.calculateVg2(Vp);
+    Ip(Vg: number, Vp: number, Vg2: number) {
+        Vg2 = this.calculateVg2(Vp, Vg2);
 
         // https://www.normankoren.com/Audio/Tubemodspice_article.html
         if (this.ampState.mode === 'triode') {
@@ -104,8 +104,8 @@ class KorenPentode extends Pentode {
         }
     }
 
-    Ig2(Vg: number, Vp: number) {
-        const Vg2 = this.calculateVg2(Vp);
+    Ig2(Vg: number, Vp: number, Vg2: number) {
+        Vg2 = this.calculateVg2(Vp, Vg2);
         const Ig2 = ((Vg + Vg2) >= 0) ? Math.pow((Vg + Vg2) / this.params.mu, 1.5) / this.params.Kg2 : 0;
 
         return Ig2;
@@ -261,12 +261,12 @@ class KorenNizhegorodovPentode extends Pentode {
         }
     }
       
-    Ip(Vg: number, Vp: number) {
+    Ip(Vg: number, Vp: number, Vg2: number) {
 //        if (addLocalNFB) Eg += Ep*NFB; // apply local NFB
             // if (currentTabIdx == 2 && doLIN && Eg_last != Eg) 
             //   plateCurrent_li_adjust(Ep, Eg);
           
-        const v_screen = this.calculateVg2(Vp);
+        const v_screen = this.calculateVg2(Vp, Vg2);
         const triode_ip = this.plateCurrentTriode(v_screen, Vg, this.params.KG1);
 
         return (this.params.advSigmoid
@@ -278,8 +278,8 @@ class KorenNizhegorodovPentode extends Pentode {
               * this.top_adjustments(Vp, Vg) * (1 + this.params.KLAMG*Vp)  + this.params.KLAM*Vp;
     }
 
-    Ig2(Vg: number, Vp: number) {
-        const v_screen = this.calculateVg2(Vp);
+    Ig2(Vg: number, Vp: number, Vg2: number) {
+        const v_screen = this.calculateVg2(Vp, Vg2);
         const triode_ip = this.plateCurrentTriode(v_screen, Vg, 1);
         const knee_coeff = this.params.advSigmoid
             ? (triode_ip * this.knee_func_erf(Vp/(
@@ -417,10 +417,10 @@ class AyumiPentode extends Pentode {
         };
     }
     
-    private calculateCurrents(Vg: number, Vp: number) {
+    private calculateCurrents(Vg: number, Vp: number, Vg2: number) {
         console.assert(Vp >= 0);
         
-        const Vg2 = this.calculateVg2(Vp);
+        Vg2 = this.calculateVg2(Vp, Vg2);
 
         console.assert(Vg2 >= 0);
 
@@ -480,12 +480,12 @@ class AyumiPentode extends Pentode {
         return {Ip: Ip, Ig2: Ig2};
     }
 
-    Ip(Vg: number, Vp: number) {
-        return this.calculateCurrents(Vg, Vp).Ip;
+    Ip(Vg: number, Vp: number, Vg2: number) {
+        return this.calculateCurrents(Vg, Vp, Vg2).Ip;
     }
 
-    Ig2(Vg: number, Vp: number) {
-        return this.calculateCurrents(Vg, Vp).Ig2;
+    Ig2(Vg: number, Vp: number, Vg2: number) {
+        return this.calculateCurrents(Vg, Vp, Vg2).Ig2;
     }
 }
 
@@ -516,18 +516,20 @@ class WeaverPentode extends Pentode {
         super(ampState);
     }
 
-    Ip(Vg: number, Vp: number): number {
+    Ip(Vg: number, Vp: number, Vg2: number): number {
+        Vg2 = this.calculateVg2(Vp, Vg2);
+
         const Frc = this.params.kc1*Math.pow(Vg, 2)+this.params.kc2*Vg+this.params.kc3;
-        const Frs = this.params.ks1*Math.pow(this.ampState.Vg2, 2)+this.params.ks2*this.ampState.Vg2+this.params.ks3;
-        const Fsc = 1/(1-(this.params.kcs*(Vg-this.params.EcRef)*(1-this.ampState.Vg2/this.params.EsRef)));
+        const Frs = this.params.ks1*Math.pow(Vg2, 2)+this.params.ks2*Vg2+this.params.ks3;
+        const Fsc = 1/(1-(this.params.kcs*(Vg-this.params.EcRef)*(1-Vg2/this.params.EsRef)));
         
         return Math.max(0, (this.params.g0*Vp+(this.params.kp1/(this.params.kp2+Vp)+this.params.kp3*Vp+this.params.kp4-this.params.g0*Vp)/(1+Math.exp((this.params.kt1-Vp)*this.params.kt2)))*Frc*Frs*Fsc);
     }
 
     // As per Bob's message: "I have not developed any model for control grid current or screen grid current. I'll probably take a crack at them eventually. In the meantime, an existing model (Koren or Ayumi) will have to be used for these."
     // Thus we calculate Ig2 using Koren's model.
-    Ig2(Vg: number, Vp: number) {
-        const Vg2 = this.calculateVg2(Vp);
+    Ig2(Vg: number, Vp: number, Vg2: number) {
+        Vg2 = this.calculateVg2(Vp, Vg2);
         const Ig2 = ((Vg + Vg2) >= 0) ? Math.pow((Vg + Vg2) / this.params.mu, 1.5) / this.params.kg2 : 0;
 
         return Ig2;
