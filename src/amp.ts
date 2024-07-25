@@ -16,7 +16,8 @@ export interface OutputSample {
     y: number,
     Ip: number,
     Vp: number,
-    Vp_inv?: number
+    Vp_inv?: number,
+    Ip_inv?: number,
 }
 
 export interface CharacteristicCurve {
@@ -60,6 +61,7 @@ export class Amp implements AmpState {
     private _Rp: number;
     private _Rk?: number;
     private _Znext?: number;
+    private _ultralinearTap: number;
     private _model?: TubeModel;
     private _dcLoadLine: DCLoadLine;
     private _acLoadLine: ACLoadLine;
@@ -86,7 +88,7 @@ export class Amp implements AmpState {
     public init() {
         this.Vq = 0;
         this.topology = this.type === 'triode' ? 'se' : 'pp';
-        this.ultralinearTap = this.mode === 'triode' ? 100 : 40;
+        this.ultralinearTap = 40;
         this.Bplus = this.defaults.Bplus;
         this.Iq = this.defaults.Iq;
         this.Vg2 = this.defaults.Vg2;
@@ -426,7 +428,18 @@ export class Amp implements AmpState {
         this._Znext = Znext;
     }
 
-    ultralinearTap?: number;
+    get ultralinearTap() { 
+        switch (this.mode) {
+            case 'ultralinear':
+                return this._ultralinearTap;
+            case 'triode':
+                return 100;
+            default:
+                return 0;
+        }
+    }
+    set ultralinearTap(ultralinearTap: number) { this._ultralinearTap = ultralinearTap; }
+
     inputHeadroom?: number;
     cathodeBypass: boolean = true;
 
@@ -461,18 +474,22 @@ export class Amp implements AmpState {
         return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + value.y*value.y), 0)/sineWave.length);
     }
 
-    averageOutputPower() : number {
+    averageOutputPowerRMS() : number {
         const sineWave = this.graphAmplifiedSineWave();
-        return sineWave.reduce((accumulator, value) => (accumulator + Math.abs(value.y) * value.Ip!), 0)/sineWave.length;
+        if (this.topology === 'pp') {
+            return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + Math.pow(Math.abs(value.Vp) * value.Ip! + Math.abs(value.Vp_inv!) * value.Ip_inv!, 2)), 0)/sineWave.length);
+        } else {
+            return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + Math.pow(Math.abs(value.Vp) * value.Ip!, 2)), 0)/sineWave.length);            
+        }
     }
 
-    maxOutputPower() : number | undefined {
+    maxOutputPowerRMS() : number | undefined {
         if (this._dcLoadLine && this.model) {
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
             const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine, this.Vg2);
             const maxIp = this.model.Ip(0, minVp, this.Vg2);
 
-            return (this.Vq - minVp) * maxIp / 2;
+            return (this.Vq - minVp) * maxIp / (2*Math.sqrt(2));
         }   
     }
 
@@ -572,9 +589,10 @@ export class Amp implements AmpState {
                 const Vp = intersectCharacteristicWithLoadLineV(this.model!, Vg, loadLine, this.Vg2);
                 const Ip = this.model!.Ip(Vg, Vp, this.Vg2);
                 if (this.topology === 'pp') {
-                    const Vg_inv = this.Vg! + this.inputHeadroom! * Math.sin(-t);
+                    const Vg_inv = this.Vg! - this.inputHeadroom! * Math.sin(t);
                     const Vp_inv = intersectCharacteristicWithLoadLineV(this.model!, Vg_inv, loadLine, this.Vg2);
-                    return {x: t, y: Vp - Vp_inv, Ip: Ip, Vp: Vp, Vp_inv: Vp_inv};
+                    const Ip_inv = this.model!.Ip(Vg_inv, Vp_inv, this.Vg2);
+                    return {x: t, y: Vp - Vp_inv, Ip: Ip, Vp: Vp, Ip_inv: Ip_inv, Vp_inv: Vp_inv};
                 } else {
                     return {x: t, y: Vp - this.Vq, Ip: Ip, Vp: Vp};
                 }

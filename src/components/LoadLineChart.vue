@@ -504,6 +504,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                 },
                 y: {
                     display: true,
+                    position: 'left',
                     border: {dash: [10, 10]},
                     grid: {
                         color: (ctx) => { return (ctx.tick.value === 0 ? '#8080FF' : 'transparent') }
@@ -521,7 +522,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                             }
                         },
                     }
-                }    
+                }
             }
         };
     } else {
@@ -529,28 +530,11 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
     }
 });
 
-const showOrHide = (shown : boolean) => {
-    if (shown) {
-        return 'Hide';
-    } else {
-        return 'Show';
-    }
-}
-
-const contextMenuItems = computed(() => [
-    {
-        label: `${showOrHide(showCathodeLoadLine.value)} Cathode Load Line`,
-        command: () => { showCathodeLoadLine.value = !showCathodeLoadLine.value; },
-        disabled: () => { return selectedTube.value === null || selectedModel.value === null }
-    }
-]);
-
 </script>
 
 <template>
     <div class="pl-4 col-12 chart-container">
         <Scatter id="tube-chart" :options="characteristicChartOptions" :data="characteristicChartData" />
-        <ContextMenu :global="true" :model="contextMenuItems" />
     </div>
     <div class="pl-4 grid align-items-center">
         <div class="grid col-12 align-items-center">
@@ -647,7 +631,7 @@ const contextMenuItems = computed(() => [
                     </div>
                     <div class="col-3 py-2">
                         <div class="flex flex-column">
-                            {{  amp.maxOutputPower()!.toFixed(2) + " W" }}
+                            {{  amp.maxOutputPowerRMS()!.toFixed(2) + " W rms" }}
                         </div>
                     </div>
                 </template>
@@ -757,7 +741,7 @@ const contextMenuItems = computed(() => [
                     </label>
                 </div>
                 <div class="col-3 py-2">
-                    <InputNumber v-model="amp.ultralinearTap" :min=10 :max=90 :step=10 showButtons
+                    <InputNumber v-model="amp.ultralinearTap" :min=0 :max=100 :step=10 showButtons
                         :disabled="amp.mode !== 'ultralinear'" />
                 </div>
             </div>
@@ -803,7 +787,7 @@ const contextMenuItems = computed(() => [
                             </label>
                         </div>
                         <div class="col-8 py-2">
-                            {{ amp.averageOutputPower().toFixed(2) + " W"}}
+                            {{ amp.averageOutputPowerRMS().toFixed(2) + " W rms" }}
                         </div>
                         <div class="col-4 py-2">
                             <label v-tooltip="'The effective amplification factor'">
