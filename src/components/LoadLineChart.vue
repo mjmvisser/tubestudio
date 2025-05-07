@@ -15,8 +15,8 @@ import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
 import Checkbox from 'primevue/checkbox';
 import ContextMenu from 'primevue/contextmenu';
+import { useRoute, useRouter } from 'vue-router';
 //import zoomPlugin from 'chartjs-plugin-zoom';
-
 
 Chart.register(
     CategoryScale,
@@ -69,9 +69,12 @@ watch(selectedTube, (index) => {
     if (index !== null) {
         tubeParams.value = tubeDatabase[index];
 
-        // clear the model
-        selectedModel.value = null;
-
+        if (selectedTubeChangeIsUserTriggered.value) {
+            // clear the model
+            selectedModel.value = null;
+            selectedTubeChangeIsUserTriggered.value = false;
+        }
+        
         // hide the cathode load line by default
         showCathodeLoadLine.value = false;
 
@@ -79,14 +82,52 @@ watch(selectedTube, (index) => {
         amp.value = new Amp(tubeParams.value.name, tubeParams.value.type, tubeParams.value.defaults, tubeParams.value.limits);
         amp.value.init();
         Iq_ma.value = amp.value.Iq * 1000;
+
+        router.push({name: route.name, params: {tubeName: tubeParams.value.name}});
+    } else {
+        router.push({name: route.name, params: {tubeName: "", model: ""}});
     }
 });
 
 watch(selectedModel, (index) => {
-    if (amp.value && index !== null && tubeParams.value !== null) {
+    if (amp.value && index !== null && tubeParams.value !== null && index < tubeParams.value.models.length) {
         amp.value.model = tubeFactory.createTube(tubeParams.value.type, amp.value, tubeParams.value.models[index]);
+
+        router.push({name: route.name, params: {model: index.toString()}});
+    } else {
+        router.push({name: route.name, params: {model: ""}});
     }
 });
+
+const route = useRoute();
+const router = useRouter();
+
+// Watch the route parameters and update selectedTube and selectedModel
+watch(
+    () => [route.params.tubeName, route.params.model],
+    ([newTubeName, newModel]) => {
+        if (newTubeName) {
+            selectedTube.value = tubeDatabase.findIndex(tube => tube.name === newTubeName as string) ?? null;
+        } else {
+            selectedTube.value = null;
+        }
+        const modelIndex = parseInt(newModel as string);
+        if (selectedTube.value !== null && !isNaN(modelIndex) && modelIndex < tubeDatabase[selectedTube.value].models.length) {
+            selectedModel.value = modelIndex;
+        } else {
+            selectedModel.value = null;
+        }
+    },
+    { immediate: true } // Trigger the watcher immediately on component load
+);
+
+const selectedTubeChangeIsUserTriggered = ref(false); // Flag to track user-triggered changes
+
+// Handle user-triggered changes from the Dropdown
+function onSelectedTubeChange(newValue: number | null) {
+    selectedTubeChangeIsUserTriggered.value = true; // Set the flag to indicate user action
+    selectedTube.value = newValue; // Update the model
+}
 
 const Iq_ma = computed({
     get() {
@@ -543,7 +584,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     <div class="text-left">
                         Tube
                         <Dropdown v-model="selectedTube" :options="tubes" optionLabel="name" optionValue="id"
-                            placeholder="Select a Tube" class='w-full md:w-14rem' />
+                            placeholder="Select a Tube" class='w-full md:w-14rem' @update:modelValue="onSelectedTubeChange" />
 
                     </div>
                 </div>
