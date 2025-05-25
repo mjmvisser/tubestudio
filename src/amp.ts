@@ -61,7 +61,7 @@ export class Amp implements AmpState {
     private _Rp: number;
     private _Rk?: number;
     private _Znext?: number;
-    private _ultralinearTap: number;
+    private _ultralinearTap?: number;
     private _model?: TubeModel;
     private _dcLoadLine: DCLoadLine;
     private _acLoadLine: ACLoadLine;
