@@ -88,9 +88,6 @@ watch(selectedTube, (index) => {
 
         Iq_ma.value = amp.value.Iq * 1000;
 
-        router.push({name: route.name, params: {tubeName: tubeParams.value.name}});
-    } else {
-        router.push({name: route.name, params: {tubeName: "", model: ""}});
     }
 });
 
@@ -105,7 +102,7 @@ const router = useRouter();
 
 // Watch the route parameters and update selectedTube and selectedModel
 watch(
-    () => route.params.tubeName,
+    () => route.query.tubeName,
     (newTubeName) => {
         if (newTubeName) {
             selectedTube.value = tubeDatabase.findIndex(tube => tube.name === newTubeName as string) ?? null;
@@ -128,8 +125,28 @@ watch(amp,
     () => {
         if (amp.value && tubeParams.value !== null) {
 
-            let queryParams : {[K in keyof AmpState]?: string;} = {};
+            let queryParams : {
+                tubeName?: string, 
+                topology?: string,
+                Bplus?: string,
+                Iq?: string,
+                Vg?: string,
+                Vg2?: string,
+                loadType?: string,
+                Rp?: string,
+                inputHeadroom?: string,
+                Znext?: string,
+                model?: string,
+                mode?: string,
+                biasMethod?: string,
+                Rk?: string,
+                cathodeBypass?: string,
+                ultralinearTap?: string,
+            } = {};
 
+            if (tubeParams.value.name !== undefined) {
+                queryParams.tubeName = tubeParams.value.name;
+            }
             if (amp.value.topology !== undefined) {
                 queryParams.topology = amp.value.topology.toString();
             }
@@ -178,7 +195,6 @@ watch(amp,
 
             router.push({
                 name: route.name, 
-                params: {'tubeName': tubeParams.value.name},
                 query: queryParams
             });
         }
