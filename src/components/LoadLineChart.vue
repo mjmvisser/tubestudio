@@ -707,8 +707,8 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
         <div class="pl-4 pr-4 chart-container">
             <Scatter id="tube-chart" :options="characteristicChartOptions" :data="characteristicChartData" />
         </div>
-        <div class="pl-4 align-items-center">
-            <div class="grid col-12 align-items-center">
+        <div class="pl-4 pt-4 align-items-center ">
+            <div class="grid col-12 align-items-center border-y-1 border-400">
                 <div class="col-4 py-2">
                     <div class="text-left">
                         <div class="text-left">
@@ -744,8 +744,8 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
 
             <template v-if="amp != null">
                 <template v-if="amp.model">
-                    <div class="grid surface-ground col-12 align-items-center">
-                        <div class="col-3 py-2">
+                    <div class="grid surface-ground col-12 align-items-center border-y-1 border-400">
+                        <div class="col-3 py-2 ">
                             <label v-tooltip="'A single-ended amplifier uses a single tube operating in class A, while a push-pull amplifier uses a pair of tubes operating in class A, class B, or class AB'">
                                 Topology
                             </label>
@@ -788,7 +788,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                     </div>
                 </template>
 
-                <div class="grid col-12 align-items-center">
+                <div class="grid col-12 align-items-center ">
                     <div class="col-3 py-2">
                         <label v-tooltip="'The DC voltage of the power supply at the plate load'">B+ (V)</label>
                     </div>
