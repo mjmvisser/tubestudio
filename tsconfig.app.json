@@ -1,17 +1,22 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
+  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx"],
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
-    "target": "ES2015",
+    "target": "ESNext",
     "esModuleInterop": true,
-    "moduleResolution":"node",
+    "moduleResolution": "Node",
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "sourceMap": true, // Enable source maps
+    "outDir": "./dist",
+    "module": "ESNext",
+    "strict": true,
+    "jsx": "preserve",
+    "skipLibCheck": true
   }
 }
