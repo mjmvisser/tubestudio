@@ -12,7 +12,10 @@ import LoadLineChart from './components/LoadLineChart.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [{ path: '/loadline/:tubeName/:model?', component: LoadLineChart }]
+  routes: [
+    { path: '/loadline/:tubeName?/', component: LoadLineChart },
+    { path: '/', redirect: '/loadline/' }
+  ]
 });
 
 createApp(App)
