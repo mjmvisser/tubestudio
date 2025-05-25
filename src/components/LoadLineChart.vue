@@ -9,7 +9,7 @@ import { tubeDatabase } from '@/tubeDatabase';
 import type { TubeInfo } from '@/tubeDatabase';
 import { tubeFactory } from '@/tubeModels';
 import { Amp } from '@/amp';
-import type { OutputSample, CharacteristicPoint, CharacteristicCurve } from '@/amp';
+import type { AmpState, OutputSample, CharacteristicPoint, CharacteristicCurve } from '@/amp';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
 import RadioButton from 'primevue/radiobutton';
@@ -72,7 +72,7 @@ watch(selectedTube, (index) => {
         if (selectedTubeChangeIsUserTriggered.value) {
             // clear the model
             selectedModel.value = null;
-            selectedTubeChangeIsUserTriggered.value = false;
+            router.push({name: route.name, query: {}});
         }
         
         // hide the cathode load line by default
@@ -81,6 +81,11 @@ watch(selectedTube, (index) => {
         // create amp with defaults
         amp.value = new Amp(tubeParams.value.name, tubeParams.value.type, tubeParams.value.defaults, tubeParams.value.limits);
         amp.value.init();
+
+        if (!selectedTubeChangeIsUserTriggered.value) {
+            overrideAmpWithRouteQueryParams();
+        }
+
         Iq_ma.value = amp.value.Iq * 1000;
 
         router.push({name: route.name, params: {tubeName: tubeParams.value.name}});
@@ -92,10 +97,6 @@ watch(selectedTube, (index) => {
 watch(selectedModel, (index) => {
     if (amp.value && index !== null && tubeParams.value !== null && index < tubeParams.value.models.length) {
         amp.value.model = tubeFactory.createTube(tubeParams.value.type, amp.value, tubeParams.value.models[index]);
-
-        router.push({name: route.name, params: {model: index.toString()}});
-    } else {
-        router.push({name: route.name, params: {model: ""}});
     }
 });
 
@@ -104,18 +105,12 @@ const router = useRouter();
 
 // Watch the route parameters and update selectedTube and selectedModel
 watch(
-    () => [route.params.tubeName, route.params.model],
-    ([newTubeName, newModel]) => {
+    () => route.params.tubeName,
+    (newTubeName) => {
         if (newTubeName) {
             selectedTube.value = tubeDatabase.findIndex(tube => tube.name === newTubeName as string) ?? null;
         } else {
             selectedTube.value = null;
-        }
-        const modelIndex = parseInt(newModel as string);
-        if (selectedTube.value !== null && !isNaN(modelIndex) && modelIndex < tubeDatabase[selectedTube.value].models.length) {
-            selectedModel.value = modelIndex;
-        } else {
-            selectedModel.value = null;
         }
     },
     { immediate: true } // Trigger the watcher immediately on component load
@@ -127,6 +122,124 @@ const selectedTubeChangeIsUserTriggered = ref(false); // Flag to track user-trig
 function onSelectedTubeChange(newValue: number | null) {
     selectedTubeChangeIsUserTriggered.value = true; // Set the flag to indicate user action
     selectedTube.value = newValue; // Update the model
+}
+
+watch(amp,
+    () => {
+        if (amp.value && tubeParams.value !== null) {
+
+            let queryParams : {[K in keyof AmpState]?: string;} = {};
+
+            if (amp.value.topology !== undefined) {
+                queryParams.topology = amp.value.topology.toString();
+            }
+            if (amp.value.Bplus !== undefined) {
+                queryParams.Bplus = amp.value.Bplus.toString();
+            }
+            if (amp.value.Iq !== undefined) {
+                queryParams.Iq = amp.value.Iq.toString();
+            }
+            if (amp.value.Vg2 !== undefined) {
+                queryParams.Vg2 = amp.value.Vg2.toString();
+            }
+            if (amp.value.Vg !== undefined) {
+                queryParams.Vg = amp.value.Vg.toString();
+            }
+            if (amp.value.loadType !== undefined) {
+                queryParams.loadType = amp.value.loadType.toString();
+            }
+            if (amp.value.Rp !== undefined) {
+                queryParams.Rp = amp.value.Rp.toString();
+            }
+            if (amp.value.inputHeadroom !== undefined) {
+                queryParams.inputHeadroom = amp.value.inputHeadroom.toString();
+            }
+            if (amp.value.Znext !== undefined) {
+                queryParams.Znext = amp.value.Znext.toString();
+            }
+            if (selectedModel.value !== null) {
+                queryParams.model = selectedModel.value.toString();
+            }
+            if (amp.value.mode !== undefined) {
+                queryParams.mode = amp.value.mode.toString();
+            }
+            if (amp.value.biasMethod !== undefined) {
+                queryParams.biasMethod = amp.value.biasMethod.toString();
+            }
+            if (amp.value.Rk !== undefined) {
+                queryParams.Rk = amp.value.Rk.toString();
+            }
+            if (amp.value.cathodeBypass !== undefined) {
+                queryParams.cathodeBypass = amp.value.cathodeBypass.toString();
+            }
+            if (amp.value.ultralinearTap !== undefined) {
+                queryParams.ultralinearTap = amp.value.ultralinearTap.toString();
+            }
+
+            router.push({
+                name: route.name, 
+                params: {'tubeName': tubeParams.value.name},
+                query: queryParams
+            });
+        }
+    },
+    {
+        deep: true
+    }
+)
+
+
+function overrideAmpWithRouteQueryParams() {
+    if (route.query && amp.value) {
+        if ('model' in route.query) {
+            selectedModel.value = parseInt(route.query.model as string);
+            if (amp.value && selectedModel.value !== null && tubeParams.value !== null && selectedModel.value < tubeParams.value.models.length) {
+                amp.value.model = tubeFactory.createTube(tubeParams.value.type, amp.value, tubeParams.value.models[selectedModel.value]);
+            }
+        }
+        if ('topology' in route.query && (route.query.topology === 'se' || route.query.topology == 'pp')) {
+            amp.value.topology = route.query.topology;
+        }
+        if ('Bplus' in route.query) {
+            amp.value.Bplus = parseFloat(route.query.Bplus as string);
+        }
+        if ('Iq' in route.query) {
+            amp.value.Iq = parseFloat(route.query.Iq as string);
+        }
+        if ('Vg2' in route.query) {
+            amp.value.Vg2 = parseFloat(route.query.Vg2 as string);
+        }
+        if ('loadType' in route.query && (route.query.loadType === 'resistive' || route.query.loadType === 'reactive')) {
+            amp.value.loadType = route.query.loadType;
+        }
+        if ('Rp' in route.query) {
+            amp.value.Rp = parseFloat(route.query.Rp as string);
+        }
+        if ('inputHeadroom' in route.query) {
+            amp.value.inputHeadroom = parseFloat(route.query.inputHeadroom as string);
+        }
+        if ('Znext' in route.query) {
+            amp.value.Znext = parseFloat(route.query.Znext as string);
+        }
+        if ('Vg' in route.query) {
+            amp.value.Vg = parseFloat(route.query.Vg as string);
+        }
+        if ('mode' in route.query && (route.query.mode === 'pentode' || route.query.mode === 'triode' || route.query.mode === 'ultralinear')) {
+            amp.value.mode = route.query.mode;
+        }
+        if ('biasMethod' in route.query && (route.query.biasMethod === 'fixed' || route.query.biasMethod === 'cathode')) {
+            amp.value.biasMethod = route.query.biasMethod;
+        }
+        if ('Rk' in route.query) {
+            amp.value.Rk = parseFloat(route.query.Rk as string);
+        }
+        if ('cathodeBypass' in route.query) {
+            amp.value.cathodeBypass = parseInt(route.query.cathodBypass as string) === 1;
+        }
+        if ('ultralinearTap' in route.query) {
+            amp.value.ultralinearTap = parseInt(route.query.ultralinearTap as string);
+        }
+    }
 }
 
 const Iq_ma = computed({
