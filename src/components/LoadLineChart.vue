@@ -704,7 +704,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
 
 <template>
     <div>
-        <div class="pl-4 pr-4 chart-container">
+        <div v-if="selectedTube !== null" class="pl-4 pr-4 chart-container">
             <Scatter id="tube-chart" :options="characteristicChartOptions" :data="characteristicChartData" />
         </div>
         <div class="pl-4 pt-4 align-items-center ">
