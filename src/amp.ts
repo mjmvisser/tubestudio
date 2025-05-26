@@ -475,11 +475,13 @@ export class Amp implements AmpState {
     }
 
     averageOutputPower(): number {
+        // average power = voltage swing * current integrated over a sine wave from 0 to 2*PI
+        // for push-pull, include both tubes
         const sineWave = this.graphAmplifiedSineWave();
         if (this.topology === 'pp') {
             return sineWave.reduce(
                 (acc, value) => 
-                    acc + Math.abs(this.Vq - value.Vp) * value.Ip! 
+                    acc + Math.abs(this.Vq - value.Vp) * value.Ip!
                         + Math.abs(this.Vq - value.Vp_inv!) * value.Ip_inv!, 0) / sineWave.length;
         } else {
             return sineWave.reduce(
@@ -495,6 +497,12 @@ export class Amp implements AmpState {
             const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine, this.Vg2);
             const maxIp = this.model.Ip(0, minVp, this.Vg2);
 
+            // max power = voltage swing * peak current
+            // max power = (quiescent plate voltage - minimum voltage) * peak current
+
+            // for push-pull, divide by two, since in class B operation, each half of the waveform
+            // is handled by a different device
+
             if (this.topology === 'se') {
                 return (this.Vq - minVp) * maxIp;
             } else {
@@ -508,7 +516,6 @@ export class Amp implements AmpState {
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
             const minVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!+this.inputHeadroom!, loadLine, this.Vg2);
             const maxVp = intersectCharacteristicWithLoadLineV(this.model, this.Vg!-this.inputHeadroom!, loadLine, this.Vg2);
-
 
             return (maxVp - minVp) / (this.inputHeadroom! * 2);
         } else { 
