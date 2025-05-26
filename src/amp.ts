@@ -428,7 +428,7 @@ export class Amp implements AmpState {
         this._Znext = Znext;
     }
 
-    get ultralinearTap() { 
+    get ultralinearTap() : number | undefined { 
         switch (this.mode) {
             case 'ultralinear':
                 return this._ultralinearTap;
@@ -438,7 +438,7 @@ export class Amp implements AmpState {
                 return 0;
         }
     }
-    set ultralinearTap(ultralinearTap: number) { this._ultralinearTap = ultralinearTap; }
+    set ultralinearTap(ultralinearTap: number | undefined) { this._ultralinearTap = ultralinearTap; }
 
     inputHeadroom?: number;
     cathodeBypass: boolean = true;
