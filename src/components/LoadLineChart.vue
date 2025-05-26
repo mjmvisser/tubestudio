@@ -802,7 +802,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                         </div>
                         <div class="col-3 py-2">
                             <div class="flex flex-column">
-                                {{  amp.maxOutputPowerRMS()!.toFixed(2) + " W rms" }}
+                                {{  amp.maxOutputPower()!.toFixed(2) + " W" }}
                             </div>
                         </div>
                     </template>
@@ -958,7 +958,7 @@ const outputHeadroomChartOptions = computed(() : ChartOptions<'scatter'> => {
                                 </label>
                             </div>
                             <div class="col-8 py-2">
-                                {{ amp.averageOutputPowerRMS().toFixed(2) + " W rms" }}
+                                {{ amp.averageOutputPower().toFixed(2) + " W" }}
                             </div>
                             <div class="col-4 py-2">
                                 <label v-tooltip="'The effective amplification factor'">

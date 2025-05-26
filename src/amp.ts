@@ -474,22 +474,32 @@ export class Amp implements AmpState {
         return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + value.y*value.y), 0)/sineWave.length);
     }
 
-    averageOutputPowerRMS() : number {
+    averageOutputPower(): number {
         const sineWave = this.graphAmplifiedSineWave();
         if (this.topology === 'pp') {
-            return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + Math.pow(Math.abs(value.Vp) * value.Ip! + Math.abs(value.Vp_inv!) * value.Ip_inv!, 2)), 0)/sineWave.length);
+            return sineWave.reduce(
+                (acc, value) => 
+                    acc + Math.abs(this.Vq - value.Vp) * value.Ip! 
+                        + Math.abs(this.Vq - value.Vp_inv!) * value.Ip_inv!, 0) / sineWave.length;
         } else {
-            return Math.sqrt(sineWave.reduce((accumulator, value) => (accumulator + Math.pow(Math.abs(value.Vp) * value.Ip!, 2)), 0)/sineWave.length);            
+            return sineWave.reduce(
+                (acc, value) =>
+                    acc + Math.abs(this.Vq - value.Vp) * value.Ip!, 0) / sineWave.length;
         }
     }
 
-    maxOutputPowerRMS() : number | undefined {
+    maxOutputPower() : number | undefined {
         if (this._dcLoadLine && this.model) {
             const loadLine = (this.Znext && this.topology === 'se') ? this._acLoadLine : this._dcLoadLine;
+
             const minVp = intersectCharacteristicWithLoadLineV(this.model, 0, loadLine, this.Vg2);
             const maxIp = this.model.Ip(0, minVp, this.Vg2);
 
-            return (this.Vq - minVp) * maxIp / (2*Math.sqrt(2));
+            if (this.topology === 'se') {
+                return (this.Vq - minVp) * maxIp;
+            } else {
+                return (this.Vq - minVp) * maxIp / 2;
+            }
         }   
     }
 
