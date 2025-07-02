@@ -95,6 +95,38 @@ export const tubeDatabase : TubeInfo[] = [
         ]
     },
     {
+        name: "12AY7",
+        type: "triode",
+        datasheet: "https://tube-data.com/sheets/049/1/12AY7.pdf",
+        defaults: {
+            Bplus: 250,
+            Rp: 100000,
+            Iq: 0.003,
+        },
+        limits: {
+            maxPp: 1.5,
+            maxVp: 300,
+            maxVp0: 500,
+            maxIp: 0.01,
+            minVg: -10,
+            maxVg: 0,
+            gridStep: 0.5
+        },
+        models: [
+            {
+                type: "ayumi",
+                attribution: "ayumi",
+                source: "https://ayumi.cava.jp/audio/pctube/node48.html",
+                G: 0.00054133951,
+                muc: 33.263226783199315,
+                alpha: 0.5420483594367906,
+                Vgo: 0.71171435,
+                Glim: 0.00095518541,
+                Xg: 0.484901962646184
+            }
+        ]
+    },
+    {
         name: "7025",
         type: "triode",
         datasheet: "https://frank.pocnet.net/sheets/168/7/7025.pdf",
