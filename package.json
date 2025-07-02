@@ -21,12 +21,12 @@
     "primeflex": "^4.0.0",
     "primevue": "^4.3.4",
     "simplify-js": "^1.2.4",
+    "ts-node": "^10.9.2",
     "vue": "^3.5.14",
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "tailwindcss": "^4.1.7",
     "@tailwindcss/postcss": "^4.1.7",
     "@tsconfig/node20": "^20.1.2",
     "@types/node": "^20.12.12",
@@ -34,6 +34,7 @@
     "autoprefixer": "^10.4.17",
     "gh-pages": "^6.1.1",
     "postcss": "^8.4.33",
+    "tailwindcss": "^4.1.7",
     "typescript": "^5.4.5",
     "vite": "^6.3.5",
     "vitest": "^3.1.4"
